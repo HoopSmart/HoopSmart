@@ -217,6 +217,21 @@
     }
     .back-btn:hover { background: rgba(30, 41, 59, 1); transform: scale(0.95); }
     .chat-title { flex: 1; font-weight: 600; font-size: 18px; }
+    .chat-menu-btn {
+      background: rgba(30, 41, 59, 0.8);
+      border: none;
+      color: white;
+      font-size: 20px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .chat-menu-btn:hover { background: rgba(30, 41, 59, 1); transform: scale(0.95); }
     .messages {
       flex: 1;
       overflow-y: auto;
@@ -265,7 +280,17 @@
       border-bottom-right-radius: 6px;
       border-bottom-left-radius: 22px;
     }
-    .message-time { font-size: 10px; color: #64748b; margin-top: 4px; }
+    .message-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-top: 4px;
+      font-size: 11px;
+    }
+    .message-time { color: #64748b; }
+    .check-mark { color: #64748b; font-size: 12px; }
+    .check-mark.read { color: #34d399; }
     .input-bar {
       padding: 12px 16px;
       background: rgba(15, 15, 26, 0.95);
@@ -288,9 +313,22 @@
     }
     .input-bar input:focus { background: rgba(30, 41, 59, 0.9); border-color: #5865f2; }
     .admin-badge { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-left: 6px; display: inline-block; }
-    .premium-badge { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-left: 6px; font-weight: bold; }
+    .premium-badge { 
+      background: linear-gradient(135deg, #fbbf24, #f59e0b); 
+      color: #000; 
+      font-size: 10px; 
+      padding: 2px 8px; 
+      border-radius: 20px; 
+      margin-left: 6px; 
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .premium-badge:hover { transform: scale(1.05); }
     .deleted-badge { color: #64748b; font-style: italic; }
-    .chats-list, .users-list-container { flex: 1; overflow-y: auto; background: transparent; }
+    .mention { color: #60a5fa; cursor: pointer; background: rgba(96, 165, 250, 0.1); padding: 0 2px; border-radius: 4px; }
+    .mention:hover { text-decoration: underline; background: rgba(96, 165, 250, 0.2); }
+    .chats-list { flex: 1; overflow-y: auto; background: transparent; }
     .chat-item {
       display: flex;
       align-items: center;
@@ -319,7 +357,16 @@
     .chat-last-msg { font-size: 13px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .chat-time { font-size: 11px; color: #475569; flex-shrink: 0; }
     .empty-state { text-align: center; padding: 60px 20px; color: #475569; font-size: 16px; }
-    .user-item {
+    
+    /* Стили для вкладки "Люди" - только поиск */
+    .search-users-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .search-result-item {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -330,8 +377,13 @@
       cursor: pointer;
       transition: all 0.3s ease;
     }
-    .user-item:hover { background: rgba(30, 41, 59, 0.7); transform: translateX(4px); }
-    .online-badge { background: #22c55e; padding: 4px 8px; border-radius: 20px; font-size: 11px; margin-left: auto; flex-shrink: 0; animation: pulse 2s infinite; }
+    .search-result-item:hover { background: rgba(30, 41, 59, 0.7); transform: translateX(4px); }
+    .not-found {
+      text-align: center;
+      padding: 40px 20px;
+      color: #64748b;
+    }
+    
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -382,6 +434,7 @@
     .profile-info { flex: 1; }
     .profile-nick { font-size: 22px; font-weight: 700; }
     .profile-username { color: #94a3b8; font-size: 14px; margin-top: 4px; }
+    .profile-description { font-size: 13px; color: #cbd5e1; margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; }
     .profile-status { font-size: 13px; margin-top: 8px; }
     .profile-buttons { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
     .settings-section { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid rgba(51, 65, 85, 0.5); }
@@ -471,8 +524,8 @@
       position: absolute;
       bottom: 0;
       right: 0;
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
       background: #22c55e;
       border-radius: 50%;
       border: 2px solid #0a0f1c;
@@ -579,15 +632,19 @@
       <div id="chatsList" class="chats-list"></div>
     </div>
 
-    <div id="usersView" style="flex:1; display:none; flex-direction:column; padding:16px; overflow-y:auto;">
-      <input type="text" id="searchUsersInput" class="search-input" placeholder="🔍 Поиск по имени или @username">
-      <div id="usersList" class="users-list-container"></div>
+    <div id="usersView" style="flex:1; display:none; flex-direction:column; min-height:0;">
+      <div class="search-users-container">
+        <input type="text" id="searchUserByUsername" class="search-input" placeholder="🔍 Введите @username для поиска">
+        <button class="btn" id="searchUserBtn">Найти пользователя</button>
+        <div id="searchUserResult" style="margin-top: 16px;"></div>
+      </div>
     </div>
 
     <div id="chatView" style="display:none; flex:1; flex-direction:column; min-height:0;">
       <div class="chat-header" id="chatHeaderBtn">
         <button class="back-btn" id="backToChats">←</button>
         <div class="chat-title" id="chatTitle">Чат</div>
+        <button class="chat-menu-btn" id="chatMenuBtn">⋮</button>
       </div>
       <div class="chat-area">
         <div class="messages" id="dmMessagesContainer"></div>
@@ -599,6 +656,15 @@
     </div>
 
     <button class="fab" id="newChatBtn">✏️</button>
+  </div>
+
+  <div id="chatMenuModal" class="modal-overlay">
+    <div class="modal-content">
+      <div style="font-size:24px; font-weight:700; margin-bottom:20px;">⚙️ Действия с чатом</div>
+      <button class="btn" id="clearForMeBtn">🗑️ Очистить только у меня</button>
+      <button class="btn btn-danger" id="clearForBothBtn" style="margin-top:12px;">⚠️ Очистить для обоих</button>
+      <button class="btn btn-secondary" id="closeChatMenuModal" style="margin-top:16px;">Закрыть</button>
+    </div>
   </div>
 
   <div id="usersModal" class="modal-overlay">
@@ -620,6 +686,7 @@
           <div class="profile-status" id="userProfileStatus">статус</div>
         </div>
       </div>
+      <div id="userProfileDescription" class="profile-description" style="display:none;"></div>
       <div class="profile-buttons">
         <button class="btn" id="sendMessageToUserBtn" style="flex:1;">💬 Написать</button>
         <button class="btn btn-danger" id="blockUserBtn" style="flex:1; display:none;">🚫 Заблокировать</button>
@@ -638,6 +705,8 @@
         <div class="settings-label">🔖 Юзернейм (уникальный, для поиска)</div>
         <div class="input-box" style="margin-bottom:12px;"><input type="text" id="profileUsernameInput" placeholder="@username"></div>
         <div id="usernameStatus" style="font-size:12px; margin-bottom:12px;"></div>
+        <div class="settings-label">📝 Описание профиля</div>
+        <div class="input-box" style="margin-bottom:12px;"><input type="text" id="profileDescriptionInput" placeholder="Расскажите о себе..."></div>
         <div class="settings-label">🎨 Аватар</div>
         <div class="avatar-selector" id="avatarGridSettings"></div>
         <div class="upload-btn" id="uploadAvatarSettingsBtn">📷 Загрузить свою картинку</div>
@@ -660,7 +729,7 @@
 
       <div class="settings-section">
         <div class="settings-title">ℹ️ О программе</div>
-        <div style="font-size:13px; color:#94a3b8;">Версия: 3.7.0<br>HoopSmart — современный мессенджер с защитой</div>
+        <div style="font-size:13px; color:#94a3b8;">Версия: 4.0.0<br>HoopSmart — современный мессенджер с защитой</div>
       </div>
       
       <div class="settings-section">
@@ -812,6 +881,24 @@
     return `● Был(а) ${date.toLocaleDateString()}`;
   }
 
+  function parseMentions(text) {
+    const regex = /@(\w+)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+      }
+      parts.push({ type: 'mention', username: match[1] });
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) {
+      parts.push({ type: 'text', content: text.substring(lastIndex) });
+    }
+    return parts;
+  }
+
   function setupAvatarUpload(btnId, fileId, previewId, callback) {
     document.getElementById(btnId).onclick = () => document.getElementById(fileId).click();
     document.getElementById(fileId).onchange = async (e) => {
@@ -822,7 +909,7 @@
           const preview = document.getElementById(previewId);
           if(preview) preview.innerHTML = `<img src="${url}" class="preview-img">`;
         }
-        const uploadedUrl = await uploadAvatar(file, 'temp');
+        const uploadedUrl = await uploadAvatar(file, currentUser?.uid || 'temp');
         if(uploadedUrl) {
           selectedAvatarUrl = uploadedUrl;
           selectedAvatar = null;
@@ -902,7 +989,7 @@
       return;
     }
     let avatarUrl = selectedAvatarUrl || selectedAvatar;
-    const profile = { login, nick, avatar: avatarUrl, uid: user.uid, deviceId, frozen: false, banned: false, isAdmin: false, premium: false, deleted: false, createdAt: Date.now(), blockedBy: [] };
+    const profile = { login, nick, avatar: avatarUrl, uid: user.uid, deviceId, frozen: false, banned: false, isAdmin: false, premium: false, deleted: false, createdAt: Date.now(), blockedBy: [], description: '' };
     await db.ref('users/'+user.uid).set(profile);
     await db.ref('devices/'+deviceId).set({ uid: user.uid });
     document.getElementById('avatarScreen').classList.remove('active');
@@ -915,7 +1002,7 @@
       let snap = await db.ref('users/'+user.uid).once('value');
       if(!snap.exists()) {
         if(user.email === 'hoopsmart_admin@system.com') {
-          const adminProfile = { login:'HooPSmart', nick:'HoopSmart Admin', avatar:'👑', uid:user.uid, deviceId, frozen:false, banned:false, isAdmin:true, premium:true, username:'hoopsmart', deleted:false, createdAt:Date.now(), blockedBy: [] };
+          const adminProfile = { login:'HooPSmart', nick:'HoopSmart Admin', avatar:'👑', uid:user.uid, deviceId, frozen:false, banned:false, isAdmin:true, premium:true, username:'hoopsmart', deleted:false, createdAt:Date.now(), blockedBy: [], description: 'Системный администратор' };
           await db.ref('users/'+user.uid).set(adminProfile);
           await db.ref('usernames/hoopsmart').set(user.uid);
           currentUser = adminProfile;
@@ -955,11 +1042,11 @@
   }
 
   function getUserDisplay(user) {
-    if(!user) return { name: 'Удаленный аккаунт', avatar: '👻', frozen: false, premium: false, isAdmin: false, deleted: true, blocked: false };
-    if(user.deleted) return { name: 'Удаленный аккаунт', avatar: '👻', frozen: false, premium: false, isAdmin: false, deleted: true, blocked: false };
-    if(user.frozen) return { name: '❄️ Замороженный аккаунт', avatar: user.avatar || '👤', frozen: true, premium: false, isAdmin: false, deleted: false, blocked: false };
+    if(!user) return { name: 'Удаленный аккаунт', avatar: '👻', frozen: false, premium: false, isAdmin: false, deleted: true, blocked: false, description: '' };
+    if(user.deleted) return { name: 'Удаленный аккаунт', avatar: '👻', frozen: false, premium: false, isAdmin: false, deleted: true, blocked: false, description: '' };
+    if(user.frozen) return { name: '❄️ Замороженный аккаунт', avatar: user.avatar || '👤', frozen: true, premium: false, isAdmin: false, deleted: false, blocked: false, description: user.description || '' };
     const isBlocked = currentUser && user.uid !== currentUser.uid && blockedUsers.has(user.uid);
-    return { name: user.nick, avatar: user.avatar, frozen: false, premium: user.premium, isAdmin: user.isAdmin, deleted: false, username: user.username, blocked: isBlocked };
+    return { name: user.nick, avatar: user.avatar, frozen: false, premium: user.premium, isAdmin: user.isAdmin, deleted: false, username: user.username, blocked: isBlocked, description: user.description || '' };
   }
 
   async function blockUser(uid) {
@@ -976,6 +1063,12 @@
     await db.ref('users/'+currentUser.uid).update({ blockedBy: Array.from(blockedUsers) });
     alert(blockedUsers.has(uid) ? '🔒 Пользователь заблокирован' : '🔓 Пользователь разблокирован');
     document.getElementById('userProfileModal').style.display = 'none';
+  }
+
+  async function markAsRead(chatId, messageId) {
+    if (!currentUser) return;
+    const readRef = db.ref(`read/${chatId}/${currentUser.uid}/${messageId}`);
+    await readRef.set(true);
   }
 
   function initMain() {
@@ -997,7 +1090,6 @@
     
     loadCommonChat();
     loadChats();
-    loadUsersList();
     
     const fab = document.getElementById('newChatBtn');
     
@@ -1018,7 +1110,11 @@
         }
         
         if(tabName === 'chats') loadChats();
-        if(tabName === 'users') renderUsersList();
+        if(tabName === 'users') {
+          // Очищаем результаты поиска при переключении на вкладку
+          document.getElementById('searchUserByUsername').value = '';
+          document.getElementById('searchUserResult').innerHTML = '';
+        }
         currentChat = null;
       };
     });
@@ -1042,6 +1138,15 @@
 
   function getChatId(uid1, uid2) { return [uid1, uid2].sort().join('_'); }
 
+  // Удаление сообщения с мгновенным обновлением
+  async function deleteMessage(chatType, messageId) {
+    await db.ref(`messages/${chatType}/${messageId}`).remove();
+    if (currentMessageMenu) {
+      currentMessageMenu.remove();
+      currentMessageMenu = null;
+    }
+  }
+
   function showMessageMenu(event, messageId, chatType) {
     event.preventDefault();
     event.stopPropagation();
@@ -1059,7 +1164,7 @@
     menu.querySelector('.delete-btn').onclick = async () => {
       const msgId = menu.querySelector('.delete-btn').dataset.messageId;
       const type = menu.querySelector('.delete-btn').dataset.chatType;
-      await db.ref(`messages/${type}/${msgId}`).remove();
+      await deleteMessage(type, msgId);
       menu.remove();
       currentMessageMenu = null;
     };
@@ -1075,66 +1180,81 @@
     }, 10);
   }
 
-  // ========== ОБЩИЙ ЧАТ - СТАРЫЕ ВВЕРХУ, НОВЫЕ ВНИЗУ, АВТО-ПРОКРУТКА ==========
-  function loadCommonChat() {
-    const container = document.getElementById('commonMessagesContainer');
-    const ref = db.ref('messages/common');
-    ref.off();
-    container.innerHTML = '';
+  async function appendMessage(container, msg, chatId, scrollToBottom, isOwn) {
+    const div = document.createElement('div');
+    div.className = `message ${isOwn ? 'own' : ''}`;
+    div.dataset.messageId = msg.id;
     
-    let messagesQueue = [];
-    let loadedCount = 0;
-    let totalCount = 0;
+    const userSnap = await db.ref('users/'+msg.uid).once('value');
+    const display = getUserDisplay(userSnap.val());
+    const onlineSnap = await db.ref('online/'+msg.uid).once('value');
+    const isOnline = onlineSnap.val()?.online;
+    let nickHtml = display.name;
+    if(display.isAdmin) nickHtml += ' <span class="admin-badge">АДМИН</span>';
+    if(display.premium) nickHtml += ' <span class="premium-badge">⭐</span>';
+    if(display.deleted) nickHtml = '<span class="deleted-badge">Удаленный аккаунт</span>';
+    if(display.blocked) nickHtml = '<span class="deleted-badge">🚫 Заблокирован</span>';
+    const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) 
+      ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
+      : display.avatar || '👤';
+    const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
     
-    // Получаем общее количество сообщений
-    ref.once('value', (snap) => {
-      totalCount = snap.numChildren();
+    // Обработка упоминаний в тексте
+    const parts = parseMentions(msg.text);
+    let messageHtml = '';
+    for (const part of parts) {
+      if (part.type === 'text') {
+        messageHtml += escapeHtml(part.content);
+      } else {
+        messageHtml += `<span class="mention" data-username="${part.username}">@${part.username}</span>`;
+      }
+    }
+    
+    // Проверка прочитано ли сообщение
+    const readSnap = await db.ref(`read/${chatId}/${msg.uid}/${msg.id}`).once('value');
+    const isRead = readSnap.val() === true;
+    
+    div.innerHTML = `<div class="msg-avatar ${display.frozen ? 'frozen-avatar' : ''}" data-uid="${msg.uid}">${avatarHtml}${isOnline && !isOwn && !display.frozen && !display.blocked ? '<span class="online-indicator"></span>' : ''}</div>
+      <div><div class="bubble"><b>${nickHtml}</b><br>${messageHtml}</div>
+      <div class="message-footer">
+        <span class="message-time">${time}</span>
+        ${isOwn ? `<span class="check-mark ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</span>` : ''}
+      </div></div>`;
+    
+    const avatarDiv = div.querySelector('.msg-avatar');
+    avatarDiv.onclick = (e) => {
+      e.stopPropagation();
+      openUserProfile(avatarDiv.dataset.uid);
+    };
+    
+    // Клик по звездочке Premium
+    const premiumBadge = div.querySelector('.premium-badge');
+    if (premiumBadge) {
+      premiumBadge.onclick = (e) => {
+        e.stopPropagation();
+        alert('⭐ Этот пользователь использует HoopPremium!');
+      };
+    }
+    
+    // Обработка кликов по упоминаниям
+    div.querySelectorAll('.mention').forEach(mention => {
+      mention.onclick = async (e) => {
+        e.stopPropagation();
+        const username = mention.dataset.username;
+        const usersSnap = await db.ref('users').once('value');
+        const users = usersSnap.val() || {};
+        const foundUser = Object.values(users).find(u => u.username === username);
+        if (foundUser && foundUser.uid !== currentUser.uid) {
+          openUserProfile(foundUser.uid);
+        }
+      };
     });
     
-    // Загружаем сообщения в порядке возрастания timestamp (старые первыми)
-    ref.orderByChild('timestamp').on('child_added', async (snap) => {
-      const msg = snap.val();
-      if(!msg) return;
-      const msgId = snap.key;
-      const isOwn = msg.uid === currentUser.uid;
-      const div = document.createElement('div');
-      div.className = `message ${isOwn ? 'own' : ''}`;
-      div.dataset.messageId = msgId;
-      div.dataset.chatType = 'common';
-      
-      const userSnap = await db.ref('users/'+msg.uid).once('value');
-      const display = getUserDisplay(userSnap.val());
-      const onlineSnap = await db.ref('online/'+msg.uid).once('value');
-      const isOnline = onlineSnap.val()?.online;
-      let nickHtml = display.name;
-      if(display.isAdmin) nickHtml += ' <span class="admin-badge">АДМИН</span>';
-      if(display.premium) nickHtml += ' <span class="premium-badge">⭐</span>';
-      if(display.deleted) nickHtml = '<span class="deleted-badge">Удаленный аккаунт</span>';
-      if(display.blocked) nickHtml = '<span class="deleted-badge">🚫 Заблокирован</span>';
-      const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) 
-        ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
-        : display.avatar || '👤';
-      const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
-      div.innerHTML = `<div class="msg-avatar ${display.frozen ? 'frozen-avatar' : ''}" data-uid="${msg.uid}">${avatarHtml}${isOnline && !isOwn && !display.frozen && !display.blocked ? '<span class="online-indicator"></span>' : ''}</div>
-        <div><div class="bubble"><b>${nickHtml}</b><br>${msg.text}</div><div class="message-time">${time}</div></div>`;
-      
-      const avatarDiv = div.querySelector('.msg-avatar');
-      avatarDiv.onclick = (e) => {
-        e.stopPropagation();
-        openUserProfile(avatarDiv.dataset.uid);
-      };
-      
-      div.oncontextmenu = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        showMessageMenu(e, msgId, 'common');
-        return false;
-      };
-      
+    if(currentUser.isAdmin) {
       let pressTimer;
       div.ontouchstart = (e) => {
         pressTimer = setTimeout(() => {
-          showMessageMenu(e.touches[0], msgId, 'common');
+          showMessageMenu(e.touches[0], msg.id, chatId);
         }, 500);
       };
       div.ontouchend = () => {
@@ -1143,15 +1263,73 @@
       div.ontouchmove = () => {
         clearTimeout(pressTimer);
       };
+      div.oncontextmenu = (e) => {
+        e.preventDefault();
+        showMessageMenu(e, msg.id, chatId);
+        return false;
+      };
+    }
+    
+    container.appendChild(div);
+    
+    if (!isOwn && chatId !== 'common') {
+      await markAsRead(chatId, msg.id);
+    }
+    
+    if (scrollToBottom) {
+      setTimeout(() => {
+        div.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    }
+  }
+  
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // ОБЩИЙ ЧАТ
+  let commonMessagesLoaded = false;
+  
+  function loadCommonChat() {
+    const container = document.getElementById('commonMessagesContainer');
+    const ref = db.ref('messages/common');
+    ref.off();
+    container.innerHTML = '';
+    
+    let initialLoad = true;
+    
+    ref.orderByChild('timestamp').once('value', async (snapshot) => {
+      const data = snapshot.val() || {};
+      const messages = Object.entries(data).map(([key, value]) => ({ ...value, id: key }));
+      messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
       
-      container.appendChild(div);
-      loadedCount++;
+      for (const msg of messages) {
+        await appendMessage(container, msg, 'common', false, msg.uid === currentUser.uid);
+      }
       
-      // После загрузки всех сообщений прокручиваем в самый низ
-      if(loadedCount === totalCount && totalCount > 0) {
-        setTimeout(() => {
-          container.scrollTop = container.scrollHeight;
-        }, 100);
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 100);
+      initialLoad = false;
+    });
+    
+    // Слушаем новые сообщения
+    ref.orderByChild('timestamp').startAfter(Date.now()).on('child_added', async (snap) => {
+      if (!initialLoad) {
+        const msg = snap.val();
+        if (msg) {
+          await appendMessage(container, { ...msg, id: snap.key }, 'common', true, msg.uid === currentUser.uid);
+        }
+      }
+    });
+    
+    // Слушаем удаление сообщений
+    ref.on('child_removed', async (snap) => {
+      const messageElement = container.querySelector(`.message[data-message-id="${snap.key}"]`);
+      if (messageElement) {
+        messageElement.remove();
       }
     });
   }
@@ -1166,20 +1344,16 @@
       isAdmin: currentUser.isAdmin || false, premium: currentUser.premium || false
     });
     document.getElementById('commonMessageInput').value = '';
-    // Прокрутка вниз после отправки нового сообщения
-    setTimeout(() => {
-      const container = document.getElementById('commonMessagesContainer');
-      container.scrollTop = container.scrollHeight;
-    }, 100);
   };
 
+  // ЧАТЫ
   async function loadChats() {
     if(!currentUser) return;
     const usersSnap = await db.ref('users').once('value');
     const users = usersSnap.val() || {};
     const allChats = [];
     for(let uid in users) {
-      if(uid !== currentUser.uid && !blockedUsers.has(uid)) {
+      if(uid !== currentUser.uid && !blockedUsers.has(uid) && !users[uid]?.deleted) {
         const chatId = getChatId(currentUser.uid, uid);
         const snap = await db.ref('chats/'+chatId).once('value');
         if(snap.exists()) allChats.push({ id: chatId, otherUid: uid, data: snap.val() });
@@ -1238,47 +1412,38 @@
     ref.off();
     container.innerHTML = '';
     
-    let loadedCount = 0;
-    let totalCount = 0;
+    let initialLoad = true;
     
-    ref.once('value', (snap) => {
-      totalCount = snap.numChildren();
+    ref.orderByChild('timestamp').once('value', async (snapshot) => {
+      const data = snapshot.val() || {};
+      const messages = Object.entries(data).map(([key, value]) => ({ ...value, id: key }));
+      messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      
+      for (const msg of messages) {
+        await appendMessage(container, msg, chatId, false, msg.uid === currentUser.uid);
+      }
+      
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 100);
+      initialLoad = false;
     });
     
-    ref.orderByChild('timestamp').on('child_added', async (snap) => {
-      const msg = snap.val();
-      if(!msg) return;
-      const isOwn = msg.uid === currentUser.uid;
-      const div = document.createElement('div');
-      div.className = `message ${isOwn ? 'own' : ''}`;
-      const userSnap = await db.ref('users/'+msg.uid).once('value');
-      const display = getUserDisplay(userSnap.val());
-      const onlineSnap = await db.ref('online/'+msg.uid).once('value');
-      const isOnline = onlineSnap.val()?.online;
-      let nickHtml = display.name;
-      if(display.isAdmin) nickHtml += ' <span class="admin-badge">АДМИН</span>';
-      if(display.premium) nickHtml += ' <span class="premium-badge">⭐</span>';
-      if(display.deleted) nickHtml = '<span class="deleted-badge">Удаленный аккаунт</span>';
-      if(display.blocked) nickHtml = '<span class="deleted-badge">🚫 Заблокирован</span>';
-      const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) 
-        ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
-        : display.avatar || '👤';
-      const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
-      div.innerHTML = `<div class="msg-avatar ${display.frozen ? 'frozen-avatar' : ''}" data-uid="${msg.uid}">${avatarHtml}${isOnline && !isOwn && !display.frozen && !display.blocked ? '<span class="online-indicator"></span>' : ''}</div><div><div class="bubble"><b>${nickHtml}</b><br>${msg.text}</div><div class="message-time">${time}</div></div>`;
-      
-      const avatarDiv = div.querySelector('.msg-avatar');
-      avatarDiv.onclick = (e) => {
-        e.stopPropagation();
-        openUserProfile(avatarDiv.dataset.uid);
-      };
-      
-      container.appendChild(div);
-      loadedCount++;
-      
-      if(loadedCount === totalCount && totalCount > 0) {
-        setTimeout(() => {
-          container.scrollTop = container.scrollHeight;
-        }, 100);
+    // Слушаем новые сообщения
+    ref.orderByChild('timestamp').startAfter(Date.now()).on('child_added', async (snap) => {
+      if (!initialLoad) {
+        const msg = snap.val();
+        if (msg) {
+          await appendMessage(container, { ...msg, id: snap.key }, chatId, true, msg.uid === currentUser.uid);
+        }
+      }
+    });
+    
+    // Слушаем удаление сообщений
+    ref.on('child_removed', async (snap) => {
+      const messageElement = container.querySelector(`.message[data-message-id="${snap.key}"]`);
+      if (messageElement) {
+        messageElement.remove();
       }
     });
   }
@@ -1298,10 +1463,73 @@
     await db.ref('chats/'+chatId).set({ lastMsg: text, lastTime: Date.now() });
     document.getElementById('dmMessageInput').value = '';
     loadChats();
-    setTimeout(() => {
-      const container = document.getElementById('dmMessagesContainer');
-      container.scrollTop = container.scrollHeight;
-    }, 100);
+  };
+
+  // Очистка чата
+  document.getElementById('chatMenuBtn').onclick = () => {
+    document.getElementById('chatMenuModal').style.display = 'flex';
+  };
+  document.getElementById('closeChatMenuModal').onclick = () => document.getElementById('chatMenuModal').style.display = 'none';
+  
+  document.getElementById('clearForMeBtn').onclick = async () => {
+    if(!currentChat || currentChat.type !== 'dm') return;
+    const chatId = getChatId(currentUser.uid, currentChat.uid);
+    await db.ref(`cleared/${chatId}/${currentUser.uid}`).set(true);
+    document.getElementById('dmMessagesContainer').innerHTML = '';
+    document.getElementById('chatMenuModal').style.display = 'none';
+    alert('Чат очищен только у вас');
+  };
+  
+  document.getElementById('clearForBothBtn').onclick = async () => {
+    if(!currentChat || currentChat.type !== 'dm') return;
+    if(confirm('Очистить чат для обоих? Это действие необратимо!')) {
+      const chatId = getChatId(currentUser.uid, currentChat.uid);
+      await db.ref(`messages/${chatId}`).remove();
+      await db.ref(`chats/${chatId}`).remove();
+      document.getElementById('dmMessagesContainer').innerHTML = '';
+      document.getElementById('chatMenuModal').style.display = 'none';
+      document.querySelector('.tab[data-tab="chats"]').click();
+      alert('Чат очищен для обоих');
+    }
+  };
+
+  // ПОИСК ПОЛЬЗОВАТЕЛЯ ПО ЮЗЕРНЕЙМУ
+  document.getElementById('searchUserBtn').onclick = async () => {
+    const username = document.getElementById('searchUserByUsername').value.trim().toLowerCase();
+    const resultContainer = document.getElementById('searchUserResult');
+    
+    if (!username) {
+      resultContainer.innerHTML = '<div class="not-found">❌ Введите юзернейм для поиска</div>';
+      return;
+    }
+    
+    // Убираем @ если есть
+    const cleanUsername = username.startsWith('@') ? username.substring(1) : username;
+    
+    const usersSnap = await db.ref('users').once('value');
+    const users = usersSnap.val() || {};
+    
+    const foundUser = Object.values(users).find(u => u.username === cleanUsername && !u.deleted);
+    
+    if (foundUser && foundUser.uid !== currentUser.uid) {
+      const display = getUserDisplay(foundUser);
+      const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) 
+        ? `<img src="${display.avatar}" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">` 
+        : `<div style="font-size:40px;">${display.avatar || '👤'}</div>`;
+      
+      resultContainer.innerHTML = `
+        <div class="search-result-item" data-uid="${foundUser.uid}">
+          ${avatarHtml}
+          <div style="flex:1;">
+            <div><strong>${display.name}</strong> ${display.premium ? '⭐' : ''}</div>
+            <div style="font-size:12px; color:#94a3b8;">@${foundUser.username}</div>
+          </div>
+        </div>
+      `;
+      document.querySelector('.search-result-item').onclick = () => openUserProfile(foundUser.uid);
+    } else {
+      resultContainer.innerHTML = '<div class="not-found">❌ Пользователь с таким юзернеймом не найден</div>';
+    }
   };
 
   document.getElementById('backToChats').onclick = () => {
@@ -1312,30 +1540,6 @@
   document.getElementById('newChatBtn').onclick = () => { document.getElementById('usersModal').style.display = 'flex'; loadUsersForModal(); };
   document.getElementById('closeUsersModal').onclick = () => document.getElementById('usersModal').style.display = 'none';
   document.getElementById('closeUserProfileModal').onclick = () => document.getElementById('userProfileModal').style.display = 'none';
-
-  async function loadUsersList() { if(db) db.ref('users').on('value', () => renderUsersList()); }
-  async function renderUsersList() {
-    if(!currentUser) return;
-    const snap = await db.ref('users').once('value');
-    const users = snap.val() || {};
-    const search = document.getElementById('searchUsersInput')?.value.toLowerCase() || '';
-    const onlineSnap = await db.ref('online').once('value');
-    const onlineMap = onlineSnap.val() || {};
-    const container = document.getElementById('usersList');
-    if(!container) return;
-    const html = Object.values(users).filter(u => u.uid !== currentUser.uid && !u.deleted && !blockedUsers.has(u.uid)).map(u => {
-      if(!u.nick.toLowerCase().includes(search) && !(u.username || '').toLowerCase().includes(search)) return '';
-      const isOnline = onlineMap[u.uid]?.online;
-      const display = getUserDisplay(u);
-      const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) 
-        ? `<img src="${display.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` 
-        : `<div style="font-size:32px;">${display.avatar || '👤'}</div>`;
-      return `<div class="user-item" data-uid="${u.uid}"><div class="${display.frozen ? 'frozen-avatar' : ''}" style="display:flex;">${avatarHtml}</div><div style="flex:1;"><div style="${display.premium ? 'color:#fbbf24' : ''}"><strong>${display.name}</strong> ${display.premium ? '⭐' : ''}</div><div style="font-size:12px; color:#94a3b8;">${u.username ? '@'+u.username : ''}</div></div>${isOnline && !display.frozen && !display.blocked ? '<span class="online-badge">🟢</span>' : ''}</div>`;
-    }).join('');
-    container.innerHTML = html || '<div class="empty-state">👥 Пользователи не найдены</div>';
-    document.querySelectorAll('#usersList .user-item').forEach(el => el.onclick = () => openUserProfile(el.dataset.uid));
-  }
-  document.getElementById('searchUsersInput').addEventListener('input', () => renderUsersList());
 
   async function loadUsersForModal() {
     const snap = await db.ref('users').once('value');
@@ -1367,9 +1571,31 @@
       ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` 
       : display.avatar || '👤';
     document.getElementById('userProfileAvatar').innerHTML = avatarHtml;
-    document.getElementById('userProfileNick').innerHTML = `${display.name} ${display.premium ? '⭐' : ''}`;
+    
+    // Добавляем звездочку с обработчиком клика
+    const premiumStar = display.premium ? '<span class="premium-badge" style="cursor:pointer;">⭐ Premium</span>' : '';
+    document.getElementById('userProfileNick').innerHTML = `${display.name} ${premiumStar}`;
+    
     document.getElementById('userProfileUsername').textContent = user.username ? '@'+user.username : 'нет юзернейма';
     document.getElementById('userProfileStatus').textContent = formatLastSeen(onlineData.lastSeen, onlineData.online, display.frozen, isBlocked);
+    
+    // Обработчик клика на звездочку Premium в профиле
+    const premiumSpan = document.querySelector('#userProfileNick .premium-badge');
+    if (premiumSpan) {
+      premiumSpan.onclick = (e) => {
+        e.stopPropagation();
+        alert('⭐ Этот пользователь использует HoopPremium!');
+      };
+    }
+    
+    // Показываем описание, если оно есть
+    const descDiv = document.getElementById('userProfileDescription');
+    if(display.description && display.description.trim() !== '') {
+      descDiv.innerHTML = `📝 ${escapeHtml(display.description)}`;
+      descDiv.style.display = 'block';
+    } else {
+      descDiv.style.display = 'none';
+    }
     
     const blockBtn = document.getElementById('blockUserBtn');
     if(uid !== currentUser.uid && !currentUser.isAdmin) {
@@ -1396,6 +1622,7 @@
     if(currentUser.frozen && !currentUser.isAdmin) { alert('Аккаунт заморожен'); return; }
     document.getElementById('profileNickInput').value = currentUser.nick;
     document.getElementById('profileUsernameInput').value = currentUser.username || '';
+    document.getElementById('profileDescriptionInput').value = currentUser.description || '';
     document.getElementById('usernameStatus').innerHTML = '';
     document.getElementById('currentPasswordInput').value = '';
     document.getElementById('newPasswordInput').value = '';
@@ -1414,10 +1641,24 @@
     if(currentUser.frozen && !currentUser.isAdmin) { alert('Аккаунт заморожен'); return; }
     const newNick = document.getElementById('profileNickInput').value.trim();
     const newUsernameRaw = document.getElementById('profileUsernameInput').value.trim();
+    const newDescription = document.getElementById('profileDescriptionInput').value.trim();
     let newUsername = newUsernameRaw.toLowerCase();
     if(!newNick) { document.getElementById('usernameStatus').innerHTML = '<span style="color:#f87171;">❌ Введите никнейм</span>'; return; }
     if(newUsername && !/^[a-z0-9_]{3,20}$/.test(newUsername)) { document.getElementById('usernameStatus').innerHTML = '<span style="color:#f87171;">❌ 3-20 символов (a-z,0-9,_)</span>'; return; }
     let finalAvatar = selectedAvatarUrl || selectedAvatar || '👤';
+    
+    // Если загружена новая картинка, сохраняем её в Storage
+    if (selectedAvatarUrl && selectedAvatarUrl.startsWith('blob:')) {
+      const file = document.getElementById('avatarFileSettings').files[0];
+      if (file) {
+        const uploadedUrl = await uploadAvatar(file, currentUser.uid);
+        if (uploadedUrl) {
+          finalAvatar = uploadedUrl;
+          selectedAvatarUrl = uploadedUrl;
+        }
+      }
+    }
+    
     if(newUsername && newUsername !== currentUser.username) {
       const unique = await isUsernameUnique(newUsername, currentUser.uid);
       if(!unique) { document.getElementById('usernameStatus').innerHTML = '<span style="color:#f87171;">❌ Юзернейм занят</span>'; return; }
@@ -1426,9 +1667,10 @@
       currentUser.username = newUsername;
       document.getElementById('usernameStatus').innerHTML = '<span style="color:#22c55e;">✅ Юзернейм изменен</span>';
     }
-    await db.ref('users/'+currentUser.uid).update({ nick: newNick, avatar: finalAvatar, username: currentUser.username });
+    await db.ref('users/'+currentUser.uid).update({ nick: newNick, avatar: finalAvatar, username: currentUser.username, description: newDescription });
     currentUser.nick = newNick;
     currentUser.avatar = finalAvatar;
+    currentUser.description = newDescription;
     updateHeaderUI();
     setTimeout(() => document.getElementById('settingsModal').style.display = 'none', 1500);
   };
