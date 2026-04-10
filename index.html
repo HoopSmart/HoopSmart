@@ -455,7 +455,6 @@
       justify-content: center;
     }
     .fab:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(88, 101, 242, 0.5); }
-    .fab.hidden { display: none; }
     .admin-panel {
       position: fixed;
       bottom: 0;
@@ -738,7 +737,7 @@
 
       <div class="settings-section">
         <div class="settings-title">ℹ️ О программе</div>
-        <div style="font-size:13px; color:#94a3b8;">Версия: 5.2.0<br>HoopSmart — современный мессенджер с группами</div>
+        <div style="font-size:13px; color:#94a3b8;">Версия: 5.3.0<br>HoopSmart — современный мессенджер с группами</div>
       </div>
       
       <div class="settings-section">
@@ -804,7 +803,6 @@
     document.body.classList.add('light');
   }
 
-  // Стили для светлой темы
   const lightThemeStyle = document.createElement('style');
   lightThemeStyle.textContent = `
     body.light { background: #f0f0f5; }
@@ -1202,20 +1200,8 @@
         }
         if(tabName === 'chats') loadChats();
         currentChat = null;
-        
-        // Показываем/скрываем кнопку карандаша только на вкладке "Чаты"
-        const fab = document.getElementById('newChatBtn');
-        if (tabName === 'chats') {
-          fab.classList.remove('hidden');
-        } else {
-          fab.classList.add('hidden');
-        }
       };
     });
-    
-    // По умолчанию показываем кнопку карандаша
-    const fab = document.getElementById('newChatBtn');
-    fab.classList.remove('hidden');
   }
 
   function updateHeaderUI() {
@@ -1456,9 +1442,6 @@
     if(currentUser.frozen) { alert('Аккаунт заморожен'); return; }
     currentChat = { id: chatId, type: type };
     
-    // Скрываем кнопку карандаша при открытии чата
-    document.getElementById('newChatBtn').classList.add('hidden');
-    
     if (type === 'dm') {
       const otherUid = chatId.split('_').find(uid => uid !== currentUser.uid);
       const otherSnap = await db.ref('users/'+otherUid).once('value');
@@ -1498,11 +1481,9 @@
     let initialLoad = true;
     let messages = [];
     
-    // Загружаем все сообщения, сортируем и добавляем в правильном порядке
     ref.orderByChild('timestamp').once('value', async (snapshot) => {
       const data = snapshot.val() || {};
       messages = Object.entries(data).map(([key, value]) => ({ ...value, id: key }));
-      // Сортируем по возрастанию времени (старые вверху, новые внизу)
       messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
       
       const chatData = currentChat.type === 'group' ? (await db.ref('groups/'+currentChat.id).once('value')).val() : null;
@@ -1511,14 +1492,12 @@
         await appendMessage(container, msg, currentChat.id, false, msg.uid === currentUser.uid, currentChat.type, chatData);
       }
       
-      // Прокручиваем в самый низ после загрузки всех сообщений
       setTimeout(() => {
         container.scrollTop = container.scrollHeight;
       }, 100);
       initialLoad = false;
     });
     
-    // Слушаем новые сообщения
     ref.orderByChild('timestamp').startAfter(Date.now()).on('child_added', async (snap) => {
       if (!initialLoad) {
         const msg = snap.val();
@@ -1529,7 +1508,6 @@
       }
     });
     
-    // Слушаем удаление сообщений
     ref.on('child_removed', async (snap) => {
       const messageElement = container.querySelector(`.message[data-message-id="${snap.key}"]`);
       if (messageElement) {
@@ -1537,7 +1515,6 @@
       }
     });
     
-    // Слушаем изменения статуса прочитано
     const readRef = db.ref(`read/${currentChat.id}`);
     readRef.on('child_added', (snap) => {
       const messagesRead = snap.val();
@@ -1566,7 +1543,7 @@
     loadChats();
   };
 
-  // СОЗДАНИЕ ГРУППЫ
+  // ========== СОЗДАНИЕ ГРУППЫ (ИСПРАВЛЕНО) ==========
   document.getElementById('newChatBtn').onclick = () => {
     const modal = document.getElementById('createGroupModal');
     if (modal) {
@@ -1582,10 +1559,6 @@
   };
   
   document.getElementById('closeCreateGroupModal').onclick = () => document.getElementById('createGroupModal').style.display = 'none';
-  document.getElementById('closeUsersModal').onclick = () => document.getElementById('usersModal').style.display = 'none';
-  document.getElementById('closeUserProfileModal').onclick = () => document.getElementById('userProfileModal').style.display = 'none';
-  document.getElementById('closeGroupSettingsModal').onclick = () => document.getElementById('groupSettingsModal').style.display = 'none';
-  document.getElementById('closeChatMenuModal').onclick = () => document.getElementById('chatMenuModal').style.display = 'none';
   
   document.getElementById('addMemberBtn').onclick = async () => {
     const username = document.getElementById('memberUsernameInput').value.trim().toLowerCase();
@@ -1616,7 +1589,10 @@
   
   document.getElementById('createGroupBtn').onclick = async () => {
     const groupName = document.getElementById('groupNameInput').value.trim();
-    if (!groupName) { alert('Введите название группы'); return; }
+    if (!groupName) { 
+      alert('Введите название группы'); 
+      return; 
+    }
     
     let avatar = groupAvatarUrl || groupSelectedAvatar || '👥';
     const members = {};
@@ -1636,41 +1612,48 @@
     await db.ref('groups/'+groupId).set(groupData);
     document.getElementById('createGroupModal').style.display = 'none';
     loadChats();
-    alert('Группа создана!');
+    alert(`Группа "${groupName}" создана! Участники: ${Object.keys(members).length} человек`);
   };
+  
+  document.getElementById('closeUsersModal').onclick = () => document.getElementById('usersModal').style.display = 'none';
+  document.getElementById('closeUserProfileModal').onclick = () => document.getElementById('userProfileModal').style.display = 'none';
+  document.getElementById('closeGroupSettingsModal').onclick = () => document.getElementById('groupSettingsModal').style.display = 'none';
+  document.getElementById('closeChatMenuModal').onclick = () => document.getElementById('chatMenuModal').style.display = 'none';
   
   // Управление группой
   document.getElementById('chatMenuBtn').onclick = async () => {
-    if (currentChat.type === 'group') {
+    if (currentChat && currentChat.type === 'group') {
       const groupSnap = await db.ref('groups/'+currentChat.id).once('value');
       const group = groupSnap.val();
-      if (group.owner === currentUser.uid) {
+      if (group && group.owner === currentUser.uid) {
         document.getElementById('editGroupNameInput').value = group.name;
         document.getElementById('isOwnerSection').style.display = 'block';
-      } else {
+      } else if (group) {
         document.getElementById('isOwnerSection').style.display = 'none';
       }
-      const membersList = document.getElementById('groupMembersList');
-      membersList.innerHTML = '';
-      for (let uid in group.members) {
-        const userSnap = await db.ref('users/'+uid).once('value');
-        const user = userSnap.val();
-        if (user) {
-          const memberDiv = document.createElement('div');
-          memberDiv.className = 'group-member';
-          memberDiv.innerHTML = `<span>${user.nick} ${uid === group.owner ? '👑' : ''}</span>`;
-          membersList.appendChild(memberDiv);
+      if (group) {
+        const membersList = document.getElementById('groupMembersList');
+        membersList.innerHTML = '';
+        for (let uid in group.members) {
+          const userSnap = await db.ref('users/'+uid).once('value');
+          const user = userSnap.val();
+          if (user) {
+            const memberDiv = document.createElement('div');
+            memberDiv.className = 'group-member';
+            memberDiv.innerHTML = `<span>${user.nick} ${uid === group.owner ? '👑' : ''}</span>`;
+            membersList.appendChild(memberDiv);
+          }
         }
       }
       document.getElementById('groupSettingsModal').style.display = 'flex';
-    } else {
+    } else if (currentChat) {
       document.getElementById('chatMenuModal').style.display = 'flex';
     }
   };
   
   document.getElementById('saveGroupNameBtn').onclick = async () => {
     const newName = document.getElementById('editGroupNameInput').value.trim();
-    if (newName && currentChat.type === 'group') {
+    if (newName && currentChat && currentChat.type === 'group') {
       await db.ref('groups/'+currentChat.id+'/name').set(newName);
       document.getElementById('chatTitle').innerHTML = newName;
       document.getElementById('groupSettingsModal').style.display = 'none';
@@ -1700,11 +1683,9 @@
   document.getElementById('backToChats').onclick = () => {
     document.getElementById('chatView').style.display = 'none';
     document.querySelector('.tab[data-tab="chats"]').click();
-    // Показываем кнопку карандаша при возврате к списку чатов
-    document.getElementById('newChatBtn').classList.remove('hidden');
   };
   document.getElementById('chatHeaderBtn').onclick = () => { 
-    if(currentChat?.type === 'dm') {
+    if(currentChat && currentChat.type === 'dm') {
       const otherUid = currentChat.id.split('_').find(uid => uid !== currentUser.uid);
       if(otherUid) openUserProfile(otherUid);
     }
