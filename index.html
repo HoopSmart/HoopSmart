@@ -57,6 +57,30 @@
     .fade-in { animation: fadeInScale 0.3s ease; }
     .slide-up { animation: slideUp 0.3s ease; }
     
+    /* Верификация */
+    .verified-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      background: #3b82f6;
+      border-radius: 50%;
+      margin-left: 6px;
+      font-size: 12px;
+      color: white;
+      vertical-align: middle;
+    }
+    .verified-badge::before {
+      content: "✓";
+    }
+    .verified-text {
+      font-size: 10px;
+      color: #3b82f6;
+      margin-top: 2px;
+      opacity: 0.7;
+    }
+    
     /* Анимация подарка */
     .gift-animation-overlay {
       position: fixed;
@@ -512,7 +536,7 @@
       flex-shrink: 0;
     }
     .profile-info { flex: 1; }
-    .profile-nick { font-size: 22px; font-weight: 700; }
+    .profile-nick { font-size: 22px; font-weight: 700; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
     .profile-username { color: #94a3b8; font-size: 14px; margin-top: 4px; }
     .profile-description { font-size: 13px; color: #cbd5e1; margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; }
     .profile-status { font-size: 13px; margin-top: 8px; }
@@ -797,6 +821,7 @@
           <div class="profile-nick" id="userProfileNick">Имя</div>
           <div class="profile-username" id="userProfileUsername">@username</div>
           <div class="profile-status" id="userProfileStatus">статус</div>
+          <div id="userProfileVerified" class="verified-text" style="display:none;">Аккаунт верифицирован</div>
         </div>
         <button class="profile-three-dots" id="profileThreeDotsBtn">⋮</button>
       </div>
@@ -865,6 +890,7 @@
           <div class="profile-username" id="myProfileUsername">@username</div>
           <div class="profile-status" id="myProfileStatus">статус</div>
           <div id="myProfileBalance" class="profile-balance"></div>
+          <div id="myProfileVerified" class="verified-text" style="display:none;">Аккаунт верифицирован</div>
         </div>
       </div>
       <div id="myProfileDescription" class="profile-description" style="display:none;"></div>
@@ -943,7 +969,7 @@
 
       <div class="settings-section">
         <div class="settings-title">ℹ️ О программе</div>
-        <div style="font-size:13px; color:#94a3b8;">Версия: 7.0.0<br>HoopSmart — современный мессенджер с подарками</div>
+        <div style="font-size:13px; color:#94a3b8;">Версия: 7.1.0<br>HoopSmart — современный мессенджер с подарками</div>
       </div>
       
       <button class="btn btn-secondary" id="closeSettingsModal" style="margin-top:16px;">Закрыть</button>
@@ -997,9 +1023,9 @@
     '🥚': { name: 'Пасхальное яйцо', price: 75, emoji: '🥚🐣', limited: true, maxStock: 25 }
   };
 
-  function updateLolPopStockDisplay() {
-    const stockSpan = document.getElementById('lolPopStock');
-    if (stockSpan) stockSpan.textContent = lolPopStock;
+  function updateLimitedStocksDisplay() {
+    const lolSpan = document.getElementById('lolPopStock');
+    if (lolSpan) lolSpan.textContent = lolPopStock;
     const easterSpan = document.getElementById('easterStock');
     if (easterSpan) easterSpan.textContent = easterStock;
   }
@@ -1009,14 +1035,14 @@
     lolPopStock = lolSnap.val() !== null ? lolSnap.val() : 10;
     const easterSnap = await db.ref('easterStock').once('value');
     easterStock = easterSnap.val() !== null ? easterSnap.val() : 25;
-    updateLolPopStockDisplay();
+    updateLimitedStocksDisplay();
   }
 
   async function decreaseLolPopStock() {
     if (lolPopStock <= 0) return false;
     lolPopStock--;
     await db.ref('lolPopStock').set(lolPopStock);
-    updateLolPopStockDisplay();
+    updateLimitedStocksDisplay();
     return true;
   }
   
@@ -1024,7 +1050,7 @@
     if (easterStock <= 0) return false;
     easterStock--;
     await db.ref('easterStock').set(easterStock);
-    updateLolPopStockDisplay();
+    updateLimitedStocksDisplay();
     return true;
   }
 
@@ -1234,6 +1260,14 @@
     };
   }
 
+  // Функция для отображения верификации
+  function getVerifiedBadge(isVerified) {
+    if (isVerified) {
+      return '<span class="verified-badge"></span>';
+    }
+    return '';
+  }
+
   // АВТОРИЗАЦИЯ
   document.getElementById('authActionBtn').onclick = async () => {
     const login = document.getElementById('loginInput').value.trim();
@@ -1280,7 +1314,7 @@
     const nick = document.getElementById('nickInputReg').value.trim();
     if(!nick) { showError('Введите ваше имя'); return; }
     let avatarUrl = selectedAvatarUrl || selectedAvatar;
-    const profile = { login, nick, avatar: avatarUrl, uid: user.uid, deviceId, frozen: false, banned: false, isAdmin: false, premium: false, deleted: false, createdAt: Date.now(), blockedBy: [], description: '', balance: 0, gifts: [], hideOnline: false };
+    const profile = { login, nick, avatar: avatarUrl, uid: user.uid, deviceId, frozen: false, banned: false, isAdmin: false, premium: false, deleted: false, createdAt: Date.now(), blockedBy: [], description: '', balance: 0, gifts: [], hideOnline: false, verified: false };
     await db.ref('users/'+user.uid).set(profile);
     await db.ref('devices/'+deviceId).set({ uid: user.uid });
     document.getElementById('avatarScreen').classList.remove('active');
@@ -1293,7 +1327,7 @@
       let snap = await db.ref('users/'+user.uid).once('value');
       if(!snap.exists()) {
         if(user.email === 'hoopsmart_admin@system.com') {
-          const adminProfile = { login:'HooPSmart', nick:'HoopSmart Admin', avatar:'👑', uid:user.uid, deviceId, frozen:false, banned:false, isAdmin:true, premium:true, username:'hoopsmart', deleted:false, createdAt:Date.now(), blockedBy: [], description: 'Системный администратор', balance: 0, gifts: [], hideOnline: false };
+          const adminProfile = { login:'HooPSmart', nick:'HoopSmart Admin', avatar:'👑', uid:user.uid, deviceId, frozen:false, banned:false, isAdmin:true, premium:true, username:'hoopsmart', deleted:false, createdAt:Date.now(), blockedBy: [], description: 'Системный администратор', balance: 0, gifts: [], hideOnline: false, verified: true };
           await db.ref('users/'+user.uid).set(adminProfile);
           await db.ref('usernames/hoopsmart').set(user.uid);
           currentUser = adminProfile;
@@ -1353,6 +1387,7 @@
           currentUser.premium = updated.premium;
           currentUser.balance = updated.balance;
           currentUser.hideOnline = updated.hideOnline;
+          currentUser.verified = updated.verified;
           const newGifts = updated.gifts || [];
           if (newGifts.length > lastGiftCount) {
             const newGift = newGifts[newGifts.length - 1];
@@ -1396,11 +1431,11 @@
   }
 
   function getUserDisplay(user) {
-    if(!user) return { name: 'Удаленный аккаунт', avatar: '👻', frozen: false, premium: false, isAdmin: false, deleted: true, blocked: false, description: '' };
-    if(user.deleted) return { name: 'Удаленный аккаунт', avatar: '👻', frozen: false, premium: false, isAdmin: false, deleted: true, blocked: false, description: '' };
-    if(user.frozen) return { name: '❄️ Замороженный аккаунт', avatar: user.avatar || '👤', frozen: true, premium: false, isAdmin: false, deleted: false, blocked: false, description: user.description || '' };
+    if(!user) return { name: 'Удаленный аккаунт', avatar: '👻', frozen: false, premium: false, isAdmin: false, deleted: true, blocked: false, description: '', verified: false };
+    if(user.deleted) return { name: 'Удаленный аккаунт', avatar: '👻', frozen: false, premium: false, isAdmin: false, deleted: true, blocked: false, description: '', verified: false };
+    if(user.frozen) return { name: '❄️ Замороженный аккаунт', avatar: user.avatar || '👤', frozen: true, premium: false, isAdmin: false, deleted: false, blocked: false, description: user.description || '', verified: user.verified || false };
     const isBlocked = currentUser && user.uid !== currentUser.uid && blockedUsers.has(user.uid);
-    return { name: user.nick, avatar: user.avatar, frozen: false, premium: user.premium, isAdmin: user.isAdmin, deleted: false, username: user.username, blocked: isBlocked, description: user.description || '', balance: user.balance || 0, gifts: user.gifts || [], hideOnline: user.hideOnline };
+    return { name: user.nick, avatar: user.avatar, frozen: false, premium: user.premium, isAdmin: user.isAdmin, deleted: false, username: user.username, blocked: isBlocked, description: user.description || '', balance: user.balance || 0, gifts: user.gifts || [], hideOnline: user.hideOnline, verified: user.verified || false };
   }
 
   function canSeeOnline(targetUser) {
@@ -1482,6 +1517,10 @@
     await db.ref(`chats/${chatId}`).set({ lastMsg: `🎁 Подарок: ${giftName}`, lastTime: Date.now() });
     
     if (document.getElementById('settingsBalance')) document.getElementById('settingsBalance').textContent = currentUser.balance;
+    
+    // Показываем анимацию и отправителю
+    showGiftAnimation(giftEmoji, giftName, 'Вы', comment, () => {});
+    
     return true;
   }
 
@@ -1616,7 +1655,8 @@
     const display = getUserDisplay(currentUser);
     const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) ? `<img src="${display.avatar}" class="avatar-img">` : display.avatar || '👤';
     document.getElementById('headerAvatar').innerHTML = avatarHtml;
-    document.getElementById('headerNick').innerHTML = `${display.name} ${display.premium ? '⭐' : ''}`;
+    const verifiedBadge = display.verified ? '<span class="verified-badge"></span>' : '';
+    document.getElementById('headerNick').innerHTML = `${display.name} ${display.premium ? '⭐' : ''} ${verifiedBadge}`;
   }
 
   function getChatId(uid1, uid2) { return [uid1, uid2].sort().join('_'); }
@@ -1661,6 +1701,7 @@
     const onlineData = onlineSnap.val() || {};
     const canSee = canSeeOnline(display);
     let nickHtml = display.name;
+    const verifiedBadge = display.verified ? '<span class="verified-badge"></span>' : '';
     if(display.isAdmin) nickHtml += ' <span class="admin-badge">АДМИН</span>';
     if(display.premium) nickHtml += ' <span class="premium-badge">⭐</span>';
     const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : display.avatar || '👤';
@@ -1681,7 +1722,7 @@
     const isRead = readSnap.val() === true;
     
     div.innerHTML = `<div class="msg-avatar" data-uid="${msg.uid}">${avatarHtml}${canSee && onlineData.online && !display.frozen ? '<span class="online-indicator"></span>' : ''}</div>
-      <div><div class="bubble"><b><span class="nickname-clickable" data-uid="${msg.uid}" style="cursor:pointer;">${nickHtml}</span></b><br>${messageHtml}</div>
+      <div><div class="bubble"><b><span class="nickname-clickable" data-uid="${msg.uid}" style="cursor:pointer;">${nickHtml} ${verifiedBadge}</span></b><br>${messageHtml}</div>
       <div class="message-footer"><span class="message-time">${time}</span>${isOwn ? `<span class="check-mark ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</span>` : ''}</div></div>`;
     
     div.querySelector('.msg-avatar').onclick = (e) => { e.stopPropagation(); openUserProfile(msg.uid); };
@@ -1741,10 +1782,11 @@
     container.innerHTML = filtered.map(c => {
       const other = users[c.otherUid];
       const display = getUserDisplay(other);
+      const verifiedBadge = display.verified ? '<span class="verified-badge"></span>' : '';
       const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : display.avatar || '👤';
       const lastMsg = c.data?.lastMsg || 'Нет сообщений';
       const time = c.data?.lastTime ? new Date(c.data.lastTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
-      return `<div class="chat-item" data-uid="${c.otherUid}"><div class="chat-avatar ${display.frozen ? 'frozen-avatar' : ''}">${avatarHtml}</div><div class="chat-info"><div class="chat-name">${display.name} ${display.premium ? '⭐' : ''}</div><div class="chat-last-msg">${lastMsg.substring(0,40)}</div><div class="chat-subtitle">@${other?.username || ''}</div></div><div class="chat-time">${time}</div></div>`;
+      return `<div class="chat-item" data-uid="${c.otherUid}"><div class="chat-avatar ${display.frozen ? 'frozen-avatar' : ''}">${avatarHtml}</div><div class="chat-info"><div class="chat-name">${display.name} ${display.premium ? '⭐' : ''} ${verifiedBadge}</div><div class="chat-last-msg">${lastMsg.substring(0,40)}</div><div class="chat-subtitle">@${other?.username || ''}</div></div><div class="chat-time">${time}</div></div>`;
     }).join('');
     document.querySelectorAll('.chat-item').forEach(el => el.onclick = () => openDM(el.dataset.uid));
   }
@@ -1757,7 +1799,8 @@
     if(other?.deleted) { alert('Аккаунт удален'); return; }
     currentChat = { type: 'dm', uid: otherUid };
     const display = getUserDisplay(other);
-    document.getElementById('chatTitle').innerHTML = `${display.name} ${display.premium ? '⭐' : ''}`;
+    const verifiedBadge = display.verified ? '<span class="verified-badge"></span>' : '';
+    document.getElementById('chatTitle').innerHTML = `${display.name} ${display.premium ? '⭐' : ''} ${verifiedBadge}`;
     document.getElementById('chatTitle').style.cursor = 'pointer';
     
     const onlineSnap = await db.ref('online/'+otherUid).once('value');
@@ -1891,8 +1934,9 @@
     const html = Object.values(users).filter(u => u.uid !== currentUser.uid && !u.deleted && !blockedUsers.has(u.uid)).map(u => {
       if(!u.nick.toLowerCase().includes(search) && !(u.username || '').toLowerCase().includes(search)) return '';
       const display = getUserDisplay(u);
+      const verifiedBadge = display.verified ? '<span class="verified-badge"></span>' : '';
       const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) ? `<img src="${display.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` : `<div style="font-size:32px;">${display.avatar || '👤'}</div>`;
-      return `<div class="user-item" data-uid="${u.uid}"><div class="${display.frozen ? 'frozen-avatar' : ''}">${avatarHtml}</div><div><div style="${display.premium ? 'color:#fbbf24' : ''}"><strong>${display.name}</strong> ${display.premium ? '⭐' : ''}</div><div style="font-size:12px;">${u.username ? '@'+u.username : ''}</div></div></div>`;
+      return `<div class="user-item" data-uid="${u.uid}"><div class="${display.frozen ? 'frozen-avatar' : ''}">${avatarHtml}</div><div><div style="${display.premium ? 'color:#fbbf24' : ''}"><strong>${display.name}</strong> ${display.premium ? '⭐' : ''} ${verifiedBadge}</div><div style="font-size:12px;">${u.username ? '@'+u.username : ''}</div></div></div>`;
     }).join('');
     container.innerHTML = html || '<div style="text-align:center; padding:20px;">Нет пользователей</div>';
     document.querySelectorAll('#usersListModal .user-item').forEach(el => el.onclick = () => { document.getElementById('usersModal').style.display = 'none'; openDM(el.dataset.uid); });
@@ -1909,8 +1953,9 @@
     const foundUser = Object.values(users).find(u => u.username === cleanUsername && !u.deleted);
     if (foundUser && foundUser.uid !== currentUser.uid) {
       const display = getUserDisplay(foundUser);
+      const verifiedBadge = display.verified ? '<span class="verified-badge"></span>' : '';
       const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) ? `<img src="${display.avatar}" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">` : `<div style="font-size:40px;">${display.avatar || '👤'}</div>`;
-      resultContainer.innerHTML = `<div class="search-result-item" data-uid="${foundUser.uid}">${avatarHtml}<div style="flex:1;"><div><strong>${display.name}</strong> ${display.premium ? '⭐' : ''}</div><div style="font-size:12px; color:#64748b;">@${foundUser.username}</div></div></div>`;
+      resultContainer.innerHTML = `<div class="search-result-item" data-uid="${foundUser.uid}">${avatarHtml}<div style="flex:1;"><div><strong>${display.name}</strong> ${display.premium ? '⭐' : ''} ${verifiedBadge}</div><div style="font-size:12px; color:#64748b;">@${foundUser.username}</div></div></div>`;
       document.querySelector('.search-result-item').onclick = () => openUserProfile(foundUser.uid);
     } else {
       resultContainer.innerHTML = '<div class="not-found">❌ Пользователь с таким юзернеймом не найден</div>';
@@ -1930,9 +1975,16 @@
     const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : display.avatar || '👤';
     document.getElementById('userProfileAvatar').innerHTML = avatarHtml;
     
+    const verifiedBadge = display.verified ? '<span class="verified-badge"></span>' : '';
     const premiumStar = display.premium ? '<span class="premium-badge" style="cursor:pointer;">⭐ Premium</span>' : '';
-    document.getElementById('userProfileNick').innerHTML = `${display.name} ${premiumStar}`;
+    document.getElementById('userProfileNick').innerHTML = `${display.name} ${premiumStar} ${verifiedBadge}`;
     document.getElementById('userProfileUsername').textContent = user.username ? '@'+user.username : 'нет юзернейма';
+    
+    // Показываем надпись "Аккаунт верифицирован" если есть галочка
+    const verifiedTextDiv = document.getElementById('userProfileVerified');
+    if (verifiedTextDiv) {
+      verifiedTextDiv.style.display = display.verified ? 'block' : 'none';
+    }
     
     let statusText;
     if (isBlocked) statusText = '🚫 Заблокирован';
@@ -2004,10 +2056,17 @@
     const display = getUserDisplay(currentUser);
     const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : display.avatar || '👤';
     document.getElementById('myProfileAvatar').innerHTML = avatarHtml;
-    document.getElementById('myProfileNick').innerHTML = `${display.name} ${display.premium ? '⭐' : ''}`;
+    const verifiedBadge = display.verified ? '<span class="verified-badge"></span>' : '';
+    document.getElementById('myProfileNick').innerHTML = `${display.name} ${display.premium ? '⭐' : ''} ${verifiedBadge}`;
     document.getElementById('myProfileUsername').textContent = currentUser.username ? '@'+currentUser.username : 'нет юзернейма';
     document.getElementById('myProfileStatus').textContent = '🟢 Онлайн';
     document.getElementById('myProfileBalance').innerHTML = `💰 Баланс: ${currentUser.balance || 0} HC`;
+    
+    // Показываем надпись верификации в своем профиле
+    const myVerifiedText = document.getElementById('myProfileVerified');
+    if (myVerifiedText) {
+      myVerifiedText.style.display = display.verified ? 'block' : 'none';
+    }
     
     const descDiv = document.getElementById('myProfileDescription');
     if(currentUser.description && currentUser.description.trim() !== '') {
@@ -2128,10 +2187,11 @@
       const display = getUserDisplay(u);
       const row = document.createElement('div');
       row.className = 'admin-user-row';
-      row.innerHTML = `<span><strong>${display.name}</strong> ${display.frozen ? '❄️' : ''} ${display.isAdmin ? '👑' : ''} ${display.premium ? '⭐' : ''}<br><small>@${u.username || 'нет'}</small>
+      row.innerHTML = `<span><strong>${display.name}</strong> ${display.frozen ? '❄️' : ''} ${display.isAdmin ? '👑' : ''} ${display.premium ? '⭐' : ''} ${display.verified ? '✓' : ''}<br><small>@${u.username || 'нет'}</small>
         <div style="margin-top:4px;"><input type="text" id="editUsername_${uid}" value="${u.username || ''}" placeholder="Новый юзернейм" style="background:rgba(30,41,59,0.6); border:1px solid rgba(88,101,242,0.3); border-radius:20px; padding:6px 12px; color:white; width:120px;"><button class="action-btn" data-uid="${uid}" data-action="saveUsername">💾</button>
         <div style="margin-top:4px;"><input type="number" id="editBalance_${uid}" value="${u.balance || 0}" placeholder="HC" style="background:rgba(30,41,59,0.6); border:1px solid rgba(88,101,242,0.3); border-radius:20px; padding:6px 12px; color:white; width:100px;"><button class="action-btn" data-uid="${uid}" data-action="addBalance">➕ HC</button>
-        <button class="action-btn" data-uid="${uid}" data-action="removeBalance" style="background:#dc2626;">➖ Списать HC</button></div></div></span>
+        <button class="action-btn" data-uid="${uid}" data-action="removeBalance" style="background:#dc2626;">➖ Списать HC</button>
+        <button class="action-btn" data-uid="${uid}" data-action="verify" style="background:#3b82f6;">${display.verified ? '❌ Снять верификацию' : '✅ Дать верификацию'}</button></div></div></span>
         <div>
           <button class="action-btn" data-uid="${uid}" data-action="freeze">${display.frozen ? 'Разморозить' : 'Заморозить'}</button>
           <button class="action-btn" data-uid="${uid}" data-action="ban">${u.banned ? 'Разбанить' : 'Забанить'}</button>
@@ -2208,6 +2268,15 @@
       if (uid === currentUser.uid) currentUser.balance = currentBalance - amount;
       loadAdminData();
       alert(`✅ Списано ${amount} HC у пользователя`);
+    }
+    if(e.target.dataset.action === 'verify') {
+      const userSnap = await db.ref('users/'+uid).once('value');
+      const currentVerified = userSnap.val()?.verified || false;
+      await db.ref('users/'+uid).update({ verified: !currentVerified });
+      loadAdminData();
+      alert(currentVerified ? '❌ Верификация снята' : '✅ Пользователь верифицирован');
+      if (uid === currentUser.uid) currentUser.verified = !currentVerified;
+      updateHeaderUI();
     }
   });
 
