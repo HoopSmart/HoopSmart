@@ -64,7 +64,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.9);
+      background: rgba(0,0,0,0.95);
       backdrop-filter: blur(12px);
       z-index: 2000;
       display: flex;
@@ -76,7 +76,26 @@
     .gift-animation-content {
       text-align: center;
       animation: giftPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      position: relative;
     }
+    .gift-animation-close {
+      position: absolute;
+      top: -50px;
+      right: -20px;
+      background: rgba(30,41,59,0.8);
+      border: none;
+      color: white;
+      font-size: 28px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .gift-animation-close:hover { background: rgba(30,41,59,1); transform: scale(1.05); }
     .gift-animation-emoji {
       font-size: 120px;
       animation: giftFloat 1s ease-in-out infinite;
@@ -95,6 +114,12 @@
       font-size: 14px;
       color: #94a3b8;
       margin-top: 8px;
+    }
+    .gift-animation-comment {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-top: 12px;
+      font-style: italic;
     }
     .gift-animation-button {
       margin-top: 30px;
@@ -503,7 +528,7 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-    .gift-collection-item:hover { background: rgba(30, 41, 59, 0.7); }
+    .gift-collection-item:hover { background: rgba(30, 41, 59, 0.7); transform: scale(1.02); }
     .profile-three-dots {
       position: absolute;
       top: 0;
@@ -746,10 +771,23 @@
     </div>
   </div>
 
+  <!-- Модальное окно просмотра подарка -->
+  <div id="giftViewModal" class="modal-overlay">
+    <div class="modal-content" style="text-align:center;">
+      <div style="font-size:80px; margin-bottom:16px;" id="giftViewEmoji">🎁</div>
+      <div style="font-size:20px; font-weight:700; margin-bottom:8px;" id="giftViewName">Подарок</div>
+      <div style="font-size:14px; color:#fbbf24; margin-bottom:12px;" id="giftViewPrice">Цена: 0 HC</div>
+      <div style="font-size:13px; color:#94a3b8; margin-bottom:16px;" id="giftViewNumber"></div>
+      <div style="font-size:14px; color:#cbd5e1; font-style:italic; margin-bottom:20px;" id="giftViewComment">Комментарий</div>
+      <div style="font-size:12px; color:#64748b;" id="giftViewFrom">от пользователя</div>
+      <button class="btn btn-secondary" id="closeGiftViewModal" style="margin-top:20px;">Закрыть</button>
+    </div>
+  </div>
+
   <div id="sendGiftModal" class="modal-overlay">
     <div class="modal-content">
       <div style="font-size:24px; font-weight:700; margin-bottom:20px;">🎁 Выберите подарок</div>
-      <div style="display:flex; gap:20px; justify-content:center; margin:20px 0;">
+      <div style="display:flex; gap:12px; justify-content:center; margin:20px 0; flex-wrap:wrap;">
         <div class="gift-item" data-gift-emoji="🐻" data-gift-name="Мишка" data-gift-price="15" style="display:flex; flex-direction:column; align-items:center; gap:6px; background:rgba(30,41,59,0.4); padding:12px; border-radius:20px; cursor:pointer; transition:all 0.3s;">
           <div style="font-size:32px;">🐻</div>
           <div style="font-size:12px;">Мишка</div>
@@ -760,7 +798,15 @@
           <div style="font-size:12px;">Тортик</div>
           <div style="font-size:11px; color:#fbbf24;">25 HC</div>
         </div>
+        <div class="gift-item lol-pop-gift" data-gift-emoji="🍭" data-gift-name="Lol Pop" data-gift-price="50" data-limited="true" style="display:flex; flex-direction:column; align-items:center; gap:6px; background:rgba(30,41,59,0.4); padding:12px; border-radius:20px; cursor:pointer; transition:all 0.3s; position:relative;">
+          <div style="font-size:32px;">🍭</div>
+          <div style="font-size:12px;">Lol Pop</div>
+          <div style="font-size:11px; color:#fbbf24;">50 HC</div>
+          <div style="font-size:10px; color:#ef4444; position:absolute; top:-5px; right:-5px; background:#1e293b; border-radius:20px; padding:2px 6px;" id="lolPopStock">10</div>
+        </div>
       </div>
+      <div class="settings-label" style="margin-top:12px;">💬 Комментарий к подарку (необязательно)</div>
+      <div class="input-box" style="margin-bottom:12px;"><input type="text" id="giftCommentInput" placeholder="Напишите что-нибудь..."></div>
       <button class="btn btn-secondary" id="closeSendGiftModal">Закрыть</button>
     </div>
   </div>
@@ -841,7 +887,7 @@
 
       <div class="settings-section">
         <div class="settings-title">ℹ️ О программе</div>
-        <div style="font-size:13px; color:#94a3b8;">Версия: 6.3.0<br>HoopSmart — современный мессенджер с подарками</div>
+        <div style="font-size:13px; color:#94a3b8;">Версия: 6.5.0<br>HoopSmart — современный мессенджер с подарками</div>
       </div>
       
       <div class="settings-section">
@@ -889,21 +935,44 @@
   let currentMessageMenu = null;
   let blockedUsers = new Set();
   let currentProfileUid = null;
+  let lolPopStock = 10;
 
   const gifts = {
-    '🐻': { name: 'Мишка', price: 15, emoji: '🐻' },
-    '🎂': { name: 'Тортик', price: 25, emoji: '🎂' }
+    '🐻': { name: 'Мишка', price: 15, emoji: '🐻', limited: false },
+    '🎂': { name: 'Тортик', price: 25, emoji: '🎂', limited: false },
+    '🍭': { name: 'Lol Pop', price: 50, emoji: '🍭', limited: true, maxStock: 10 }
   };
 
-  function showGiftAnimation(giftEmoji, giftName, fromName, onView) {
+  function updateLolPopStockDisplay() {
+    const stockSpan = document.getElementById('lolPopStock');
+    if (stockSpan) stockSpan.textContent = lolPopStock;
+  }
+
+  async function loadLolPopStock() {
+    const snap = await db.ref('lolPopStock').once('value');
+    lolPopStock = snap.val() !== null ? snap.val() : 10;
+    updateLolPopStockDisplay();
+  }
+
+  async function decreaseLolPopStock() {
+    if (lolPopStock <= 0) return false;
+    lolPopStock--;
+    await db.ref('lolPopStock').set(lolPopStock);
+    updateLolPopStockDisplay();
+    return true;
+  }
+
+  function showGiftAnimation(giftEmoji, giftName, fromName, comment, onView) {
     const overlay = document.createElement('div');
     overlay.className = 'gift-animation-overlay';
     overlay.innerHTML = `
       <div class="gift-animation-content">
+        <button class="gift-animation-close" id="closeGiftAnimationBtn">✕</button>
         <div class="gift-animation-emoji">${giftEmoji}</div>
         <div class="gift-animation-title">🎁 Вам подарили подарок!</div>
         <div class="gift-animation-subtitle">${fromName} подарил(а) ${giftName}</div>
-        <button class="gift-animation-button" id="closeGiftAnimation">Посмотреть</button>
+        ${comment ? `<div class="gift-animation-comment">💬 "${comment}"</div>` : ''}
+        <button class="gift-animation-button" id="viewGiftBtn">Посмотреть</button>
       </div>
     `;
     document.body.appendChild(overlay);
@@ -920,14 +989,15 @@
       overlay.appendChild(confetti);
     }
     
-    document.getElementById('closeGiftAnimation').onclick = () => {
+    document.getElementById('closeGiftAnimationBtn').onclick = () => overlay.remove();
+    document.getElementById('viewGiftBtn').onclick = () => {
       overlay.remove();
       if (onView) onView();
     };
     
     setTimeout(() => {
       if (document.body.contains(overlay)) overlay.remove();
-    }, 8000);
+    }, 15000);
   }
 
   function setTheme(theme) {
@@ -1169,11 +1239,11 @@
         return;
       }
       if(currentUser.blockedBy) blockedUsers = new Set(currentUser.blockedBy);
+      await loadLolPopStock();
       initMain();
       hideSplashAndShowScreen('mainScreen');
       setupOnline();
       
-      // Слушаем новые подарки для анимации (только для получателя)
       const userRef = db.ref('users/'+currentUser.uid);
       let lastGiftCount = (currentUser.gifts || []).length;
       userRef.on('value', (snap) => {
@@ -1186,11 +1256,7 @@
           if (newGifts.length > lastGiftCount) {
             const newGift = newGifts[newGifts.length - 1];
             if (newGift && newGift.fromName) {
-              // Показываем анимацию ТОЛЬКО получателю
-              showGiftAnimation(newGift.emoji, newGift.name, newGift.fromName, () => {
-                // При нажатии "Посмотреть" открываем профиль получателя
-                openMyProfile();
-              });
+              showGiftAnimation(newGift.emoji, newGift.name, newGift.fromName, newGift.comment, () => openMyProfile());
             }
           }
           lastGiftCount = newGifts.length;
@@ -1256,11 +1322,22 @@
     }
   }
 
-  async function sendGift(toUid, giftEmoji, giftName, price) {
+  async function sendGift(toUid, giftEmoji, giftName, price, comment) {
     if (currentUser.balance < price) {
       alert(`❌ Недостаточно средств! Нужно ${price} HC, у вас ${currentUser.balance} HC`);
       return false;
     }
+    
+    let giftNumber = null;
+    if (giftEmoji === '🍭') {
+      if (lolPopStock <= 0) {
+        alert('❌ К сожалению, лимитированный подарок Lol Pop закончился!');
+        return false;
+      }
+      giftNumber = 11 - lolPopStock;
+      await decreaseLolPopStock();
+    }
+    
     const newBalance = currentUser.balance - price;
     await db.ref('users/'+currentUser.uid).update({ balance: newBalance });
     currentUser.balance = newBalance;
@@ -1269,16 +1346,16 @@
     const toUser = toUserSnap.val();
     const userGifts = toUser.gifts || [];
     const senderName = currentUser.username ? `@${currentUser.username}` : currentUser.nick;
-    userGifts.push({ emoji: giftEmoji, name: giftName, from: currentUser.uid, fromName: senderName, date: Date.now() });
+    userGifts.push({ emoji: giftEmoji, name: giftName, from: currentUser.uid, fromName: senderName, date: Date.now(), comment: comment, price: price, number: giftNumber });
     await db.ref('users/'+toUid).update({ gifts: userGifts });
     
     const chatId = [currentUser.uid, toUid].sort().join('_');
     await db.ref(`messages/${chatId}`).push({
       uid: currentUser.uid, nick: currentUser.nick, avatar: currentUser.avatar,
-      text: `🎁 Подарок! Вы получили ${giftEmoji} ${giftName} от ${senderName}!`,
+      text: `🎁 Подарок! Вы получили ${giftEmoji} ${giftName} от ${senderName}!${comment ? ` 💬 "${comment}"` : ''}`,
       timestamp: firebase.database.ServerValue.TIMESTAMP,
       isAdmin: currentUser.isAdmin || false, premium: currentUser.premium || false,
-      isGift: true, giftEmoji: giftEmoji, giftName: giftName
+      isGift: true, giftEmoji: giftEmoji, giftName: giftName, giftComment: comment
     });
     await db.ref(`chats/${chatId}`).set({ lastMsg: `🎁 Подарок: ${giftName}`, lastTime: Date.now() });
     
@@ -1299,9 +1376,23 @@
       currentUser.gifts = newGifts;
       alert(`✅ Подарок продан за ${sellPrice} HC!`);
       if (document.getElementById('settingsBalance')) document.getElementById('settingsBalance').textContent = currentUser.balance;
-      if (document.getElementById('myGiftsCollection')) renderMyGifts();
-      if (document.getElementById('userGiftsCollection') && currentProfileUid === currentUser.uid) renderUserGifts(currentUser);
+      renderMyGifts();
     }
+  }
+  
+  function openGiftView(gift) {
+    document.getElementById('giftViewEmoji').textContent = gift.emoji;
+    document.getElementById('giftViewName').textContent = gift.name;
+    document.getElementById('giftViewPrice').textContent = `Цена: ${gift.price || gifts[gift.emoji]?.price || 0} HC`;
+    if (gift.number) {
+      document.getElementById('giftViewNumber').innerHTML = `🎫 Номер: ${gift.number}/10`;
+      document.getElementById('giftViewNumber').style.display = 'block';
+    } else {
+      document.getElementById('giftViewNumber').style.display = 'none';
+    }
+    document.getElementById('giftViewComment').textContent = gift.comment ? `💬 "${gift.comment}"` : 'Без комментария';
+    document.getElementById('giftViewFrom').innerHTML = `от ${gift.fromName || 'неизвестно'}`;
+    document.getElementById('giftViewModal').style.display = 'flex';
   }
   
   function renderMyGifts() {
@@ -1313,13 +1404,19 @@
       currentUser.gifts.forEach((gift, index) => {
         const giftDiv = document.createElement('div');
         giftDiv.className = 'gift-collection-item';
-        giftDiv.innerHTML = `${gift.emoji} ${gift.name} <span style="font-size:10px; color:#64748b;">от ${gift.fromName || 'неизвестно'}</span> <button class="action-btn sell-gift" data-index="${index}" style="margin-left:8px;">💰 Продать</button>`;
+        giftDiv.innerHTML = `${gift.emoji} ${gift.name} ${gift.number ? `#${gift.number}` : ''} <span style="font-size:10px; color:#64748b;">от ${gift.fromName || 'неизвестно'}</span> <button class="action-btn sell-gift" data-index="${index}" style="margin-left:8px;">💰 Продать</button> <button class="action-btn view-gift" data-index="${index}" style="margin-left:4px;">👁️</button>`;
         container.appendChild(giftDiv);
       });
       document.querySelectorAll('.sell-gift').forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
           sellGift(parseInt(btn.dataset.index));
+        };
+      });
+      document.querySelectorAll('.view-gift').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          openGiftView(currentUser.gifts[parseInt(btn.dataset.index)]);
         };
       });
     }
@@ -1331,11 +1428,18 @@
     container.innerHTML = '';
     if (user.gifts && user.gifts.length > 0) {
       container.innerHTML = '<div class="settings-title">🎁 Полученные подарки</div>';
-      user.gifts.forEach(gift => {
+      user.gifts.forEach((gift, index) => {
         const giftDiv = document.createElement('div');
         giftDiv.className = 'gift-collection-item';
-        giftDiv.innerHTML = `${gift.emoji} ${gift.name} <span style="font-size:10px; color:#64748b;">от ${gift.fromName || 'неизвестно'}</span>`;
+        giftDiv.innerHTML = `${gift.emoji} ${gift.name} ${gift.number ? `#${gift.number}` : ''} <span style="font-size:10px; color:#64748b;">от ${gift.fromName || 'неизвестно'}</span> <button class="action-btn view-gift" data-gift='${JSON.stringify(gift)}' style="margin-left:4px;">👁️</button>`;
         container.appendChild(giftDiv);
+      });
+      document.querySelectorAll('.view-gift').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const gift = JSON.parse(btn.dataset.gift);
+          openGiftView(gift);
+        };
       });
     }
   }
@@ -1572,7 +1676,6 @@
     loadChats();
   };
 
-  // Удаляем карандаш
   const newChatBtn = document.getElementById('newChatBtn');
   if (newChatBtn) newChatBtn.remove();
   
@@ -1581,6 +1684,7 @@
   document.getElementById('closeMyProfileModal').onclick = () => document.getElementById('myProfileModal').style.display = 'none';
   document.getElementById('closeChatMenuModal').onclick = () => document.getElementById('chatMenuModal').style.display = 'none';
   document.getElementById('closeSendGiftModal').onclick = () => document.getElementById('sendGiftModal').style.display = 'none';
+  document.getElementById('closeGiftViewModal').onclick = () => document.getElementById('giftViewModal').style.display = 'none';
   
   document.getElementById('chatMenuBtn').onclick = () => { document.getElementById('chatMenuModal').style.display = 'flex'; };
   document.getElementById('clearForMeBtn').onclick = async () => {
@@ -1700,7 +1804,6 @@
     };
   }
   
-  // Три точки - подарки
   document.getElementById('profileThreeDotsBtn')?.addEventListener('click', () => {
     if (currentProfileUid && currentProfileUid !== currentUser.uid) {
       document.getElementById('sendGiftModal').style.display = 'flex';
@@ -1709,15 +1812,20 @@
           const giftEmoji = el.dataset.giftEmoji;
           const giftName = el.dataset.giftName;
           const price = parseInt(el.dataset.giftPrice);
-          await sendGift(currentProfileUid, giftEmoji, giftName, price);
+          const comment = document.getElementById('giftCommentInput').value.trim();
+          if (giftEmoji === '🍭' && lolPopStock <= 0) {
+            alert('❌ К сожалению, лимитированный подарок Lol Pop закончился!');
+            return;
+          }
+          await sendGift(currentProfileUid, giftEmoji, giftName, price, comment);
           document.getElementById('sendGiftModal').style.display = 'none';
           document.getElementById('userProfileModal').style.display = 'none';
+          document.getElementById('giftCommentInput').value = '';
         };
       });
     }
   });
 
-  // Свой профиль
   async function openMyProfile() {
     const display = getUserDisplay(currentUser);
     const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : display.avatar || '👤';
@@ -1740,7 +1848,6 @@
   
   document.getElementById('myProfileBtn').onclick = openMyProfile;
 
-  // НАСТРОЙКИ
   document.getElementById('settingsBtn').onclick = () => openSettings();
   
   function openSettings() {
@@ -1850,7 +1957,8 @@
       row.className = 'admin-user-row';
       row.innerHTML = `<span><strong>${display.name}</strong> ${display.frozen ? '❄️' : ''} ${display.isAdmin ? '👑' : ''} ${display.premium ? '⭐' : ''}<br><small>@${u.username || 'нет'}</small>
         <div style="margin-top:4px;"><input type="text" id="editUsername_${uid}" value="${u.username || ''}" placeholder="Новый юзернейм" style="background:rgba(30,41,59,0.6); border:1px solid rgba(88,101,242,0.3); border-radius:20px; padding:6px 12px; color:white; width:120px;"><button class="action-btn" data-uid="${uid}" data-action="saveUsername">💾</button>
-        <div style="margin-top:4px;"><input type="number" id="editBalance_${uid}" value="${u.balance || 0}" placeholder="HC" style="background:rgba(30,41,59,0.6); border:1px solid rgba(88,101,242,0.3); border-radius:20px; padding:6px 12px; color:white; width:100px;"><button class="action-btn" data-uid="${uid}" data-action="addBalance">➕ HC</button></div></div></span>
+        <div style="margin-top:4px;"><input type="number" id="editBalance_${uid}" value="${u.balance || 0}" placeholder="HC" style="background:rgba(30,41,59,0.6); border:1px solid rgba(88,101,242,0.3); border-radius:20px; padding:6px 12px; color:white; width:100px;"><button class="action-btn" data-uid="${uid}" data-action="addBalance">➕ HC</button>
+        <button class="action-btn" data-uid="${uid}" data-action="removeBalance" style="background:#dc2626;">➖ Списать HC</button></div></div></span>
         <div>
           <button class="action-btn" data-uid="${uid}" data-action="freeze">${display.frozen ? 'Разморозить' : 'Заморозить'}</button>
           <button class="action-btn" data-uid="${uid}" data-action="ban">${u.banned ? 'Разбанить' : 'Забанить'}</button>
@@ -1916,6 +2024,17 @@
       if (uid === currentUser.uid) currentUser.balance = currentBalance + amount;
       loadAdminData();
       alert(`✅ Добавлено ${amount} HC пользователю`);
+    }
+    if(e.target.dataset.action === 'removeBalance') {
+      const amount = parseInt(document.getElementById(`editBalance_${uid}`).value);
+      if (isNaN(amount) || amount <= 0) { alert('Введите корректную сумму для списания'); return; }
+      const userSnap = await db.ref('users/'+uid).once('value');
+      const currentBalance = userSnap.val()?.balance || 0;
+      if (currentBalance < amount) { alert('❌ Недостаточно средств на балансе!'); return; }
+      await db.ref('users/'+uid).update({ balance: currentBalance - amount });
+      if (uid === currentUser.uid) currentUser.balance = currentBalance - amount;
+      loadAdminData();
+      alert(`✅ Списано ${amount} HC у пользователя`);
     }
   });
 
