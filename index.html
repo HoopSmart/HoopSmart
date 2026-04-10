@@ -518,19 +518,23 @@
     .profile-status { font-size: 13px; margin-top: 8px; }
     .profile-balance { font-size: 14px; margin-top: 8px; background: rgba(251, 191, 36, 0.15); padding: 8px 12px; border-radius: 20px; display: inline-block; }
     .profile-buttons { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
-    .gift-collection { margin-top: 16px; }
+    .gift-collection { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .gift-collection-item {
-      display: inline-flex;
+      display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background: rgba(30, 41, 59, 0.4);
-      padding: 8px 12px;
+      padding: 12px 8px;
       border-radius: 20px;
-      margin: 4px;
       cursor: pointer;
       transition: all 0.2s;
+      text-align: center;
     }
     .gift-collection-item:hover { background: rgba(30, 41, 59, 0.7); transform: scale(1.02); }
+    .gift-collection-emoji { font-size: 32px; }
+    .gift-collection-name { font-size: 11px; }
+    .gift-collection-from { font-size: 9px; color: #64748b; }
     .profile-three-dots {
       position: absolute;
       top: 0;
@@ -657,6 +661,39 @@
     .theme-red { background: #ef4444; color: white; }
     .theme-purple { background: #a855f7; color: white; }
     .theme-blue { background: #3b82f6; color: white; }
+    .toggle-switch {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+    }
+    .toggle-label { font-size: 14px; }
+    .toggle-checkbox {
+      width: 44px;
+      height: 22px;
+      background: #334155;
+      border-radius: 22px;
+      cursor: pointer;
+      position: relative;
+      transition: 0.2s;
+    }
+    .toggle-checkbox.active {
+      background: #5865f2;
+    }
+    .toggle-checkbox::after {
+      content: '';
+      width: 18px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      left: 3px;
+      transition: 0.2s;
+    }
+    .toggle-checkbox.active::after {
+      left: 23px;
+    }
   </style>
 </head>
 <body>
@@ -773,7 +810,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно просмотра подарка (поверх всего) -->
+  <!-- Модальное окно просмотра подарка -->
   <div id="giftViewModal" class="modal-overlay" style="z-index: 10000;">
     <div class="modal-content" style="text-align:center;">
       <div style="font-size:80px; margin-bottom:16px;" id="giftViewEmoji">🎁</div>
@@ -805,6 +842,12 @@
           <div style="font-size:12px;">Lol Pop</div>
           <div style="font-size:11px; color:#fbbf24;">50 HC</div>
           <div style="font-size:10px; color:#ef4444; position:absolute; top:-5px; right:-5px; background:#1e293b; border-radius:20px; padding:2px 6px;" id="lolPopStock">10</div>
+        </div>
+        <div class="gift-item easter-gift" data-gift-emoji="🥚" data-gift-name="Пасхальное яйцо" data-gift-price="75" data-limited="true" style="display:flex; flex-direction:column; align-items:center; gap:6px; background:rgba(30,41,59,0.4); padding:12px; border-radius:20px; cursor:pointer; transition:all 0.3s; position:relative;">
+          <div style="font-size:32px;">🥚🐣</div>
+          <div style="font-size:12px;">Пасхальное яйцо</div>
+          <div style="font-size:11px; color:#fbbf24;">75 HC</div>
+          <div style="font-size:10px; color:#ef4444; position:absolute; top:-5px; right:-5px; background:#1e293b; border-radius:20px; padding:2px 6px;" id="easterStock">25</div>
         </div>
       </div>
       <div class="settings-label" style="margin-top:12px;">💬 Комментарий к подарку (необязательно)</div>
@@ -842,10 +885,15 @@
   <div id="settingsModal" class="modal-overlay">
     <div class="modal-content">
       <div style="font-size:24px; font-weight:700; margin-bottom:20px;">⚙️ Настройки</div>
+      
+      <!-- Темы -->
       <div class="settings-section">
-        <div class="settings-title">🎨 Оформление</div>
-        <button class="btn" id="themeToggleBtn" style="background:rgba(30,41,59,0.8); margin-bottom:12px;">🌓 Сменить тему (Тёмная/Светлая)</button>
-        <div class="settings-label">⭐ Premium темы (доступны с Premium)</div>
+        <div class="settings-title">🎨 Темы</div>
+        <div class="toggle-switch">
+          <span class="toggle-label">🌓 Тёмная тема</span>
+          <div class="toggle-checkbox" id="darkThemeToggle"></div>
+        </div>
+        <div class="settings-label" style="margin-top:12px;">⭐ Premium темы</div>
         <div class="theme-btn-group">
           <button class="theme-option theme-default" data-theme="default">🔵 По умолчанию</button>
           <button class="theme-option theme-red" data-theme="red">🔴 Красная</button>
@@ -853,33 +901,39 @@
           <button class="theme-option theme-blue" data-theme="blue">🔵 Синяя</button>
         </div>
       </div>
+      
+      <!-- Безопасность -->
+      <div class="settings-section">
+        <div class="settings-title">🔐 Безопасность</div>
+        <div class="toggle-switch">
+          <span class="toggle-label">👁️ Показывать время в сети (Premium)</span>
+          <div class="toggle-checkbox" id="showOnlineToggle"></div>
+        </div>
+        <div class="settings-label" style="margin-top:16px;">🔑 Смена пароля</div>
+        <div class="input-box" style="margin-bottom:12px;"><input type="password" id="currentPasswordInput" placeholder="Текущий пароль"></div>
+        <div class="input-box" style="margin-bottom:12px;"><input type="password" id="newPasswordInput" placeholder="Новый пароль"></div>
+        <div class="input-box" style="margin-bottom:12px;"><input type="password" id="confirmNewPasswordInput" placeholder="Подтвердите пароль"></div>
+        <div id="passwordStatus" style="font-size:12px; margin-bottom:12px;"></div>
+        <button class="btn" id="changePasswordBtn">🔄 Сменить пароль</button>
+        <button class="danger-btn" id="deleteAccountBtn" style="margin-top:16px;">🗑️ Удалить аккаунт</button>
+      </div>
+
+      <!-- Основное -->
       <div class="settings-section">
         <div class="settings-title">👤 Основное</div>
-        <div class="settings-label">📝 Никнейм (отображается в чате)</div>
+        <div class="settings-label">📝 Никнейм</div>
         <div class="input-box" style="margin-bottom:12px;"><input type="text" id="profileNickInput" placeholder="Ваш никнейм"></div>
-        <div class="settings-label">🔖 Юзернейм (уникальный, для поиска)</div>
+        <div class="settings-label">🔖 Юзернейм</div>
         <div class="input-box" style="margin-bottom:12px;"><input type="text" id="profileUsernameInput" placeholder="@username"></div>
         <div id="usernameStatus" style="font-size:12px; margin-bottom:12px;"></div>
-        <div class="settings-label">📝 Описание профиля</div>
-        <div class="input-box" style="margin-bottom:12px;"><input type="text" id="profileDescriptionInput" placeholder="Расскажите о себе..."></div>
+        <div class="settings-label">📝 Описание</div>
+        <div class="input-box" style="margin-bottom:12px;"><input type="text" id="profileDescriptionInput" placeholder="О себе..."></div>
         <div class="settings-label">🎨 Аватар</div>
         <div class="avatar-selector" id="avatarGridSettings"></div>
-        <div class="upload-btn" id="uploadAvatarSettingsBtn">📷 Загрузить свою картинку</div>
+        <div class="upload-btn" id="uploadAvatarSettingsBtn">📷 Загрузить картинку</div>
         <input type="file" id="avatarFileSettings" accept="image/*" style="display:none">
         <div id="uploadPreviewSettings" style="margin-top:10px; text-align:center;"></div>
         <button class="btn" id="saveSettingsBtn" style="margin-top:16px;">💾 Сохранить</button>
-      </div>
-      
-      <div class="settings-section">
-        <div class="settings-title">🔐 Безопасность</div>
-        <div class="settings-label">🔑 Текущий пароль</div>
-        <div class="input-box" style="margin-bottom:12px;"><input type="password" id="currentPasswordInput" placeholder="Введите текущий пароль"></div>
-        <div class="settings-label">🆕 Новый пароль</div>
-        <div class="input-box" style="margin-bottom:12px;"><input type="password" id="newPasswordInput" placeholder="Новый пароль (мин. 6 символов)"></div>
-        <div class="settings-label">✓ Подтверждение</div>
-        <div class="input-box" style="margin-bottom:12px;"><input type="password" id="confirmNewPasswordInput" placeholder="Подтвердите новый пароль"></div>
-        <div id="passwordStatus" style="font-size:12px; margin-bottom:12px;"></div>
-        <button class="btn" id="changePasswordBtn">🔄 Сменить пароль</button>
       </div>
 
       <div class="settings-section">
@@ -889,13 +943,9 @@
 
       <div class="settings-section">
         <div class="settings-title">ℹ️ О программе</div>
-        <div style="font-size:13px; color:#94a3b8;">Версия: 6.5.0<br>HoopSmart — современный мессенджер с подарками</div>
+        <div style="font-size:13px; color:#94a3b8;">Версия: 7.0.0<br>HoopSmart — современный мессенджер с подарками</div>
       </div>
       
-      <div class="settings-section">
-        <div class="settings-title">⚠️ Опасная зона</div>
-        <button class="danger-btn" id="deleteAccountBtn">🗑️ Удалить аккаунт</button>
-      </div>
       <button class="btn btn-secondary" id="closeSettingsModal" style="margin-top:16px;">Закрыть</button>
     </div>
   </div>
@@ -938,21 +988,27 @@
   let blockedUsers = new Set();
   let currentProfileUid = null;
   let lolPopStock = 10;
+  let easterStock = 25;
 
   const gifts = {
     '🐻': { name: 'Мишка', price: 15, emoji: '🐻', limited: false },
     '🎂': { name: 'Тортик', price: 25, emoji: '🎂', limited: false },
-    '🍭': { name: 'Lol Pop', price: 50, emoji: '🍭', limited: true, maxStock: 10 }
+    '🍭': { name: 'Lol Pop', price: 50, emoji: '🍭', limited: true, maxStock: 10 },
+    '🥚': { name: 'Пасхальное яйцо', price: 75, emoji: '🥚🐣', limited: true, maxStock: 25 }
   };
 
   function updateLolPopStockDisplay() {
     const stockSpan = document.getElementById('lolPopStock');
     if (stockSpan) stockSpan.textContent = lolPopStock;
+    const easterSpan = document.getElementById('easterStock');
+    if (easterSpan) easterSpan.textContent = easterStock;
   }
 
-  async function loadLolPopStock() {
-    const snap = await db.ref('lolPopStock').once('value');
-    lolPopStock = snap.val() !== null ? snap.val() : 10;
+  async function loadLimitedStocks() {
+    const lolSnap = await db.ref('lolPopStock').once('value');
+    lolPopStock = lolSnap.val() !== null ? lolSnap.val() : 10;
+    const easterSnap = await db.ref('easterStock').once('value');
+    easterStock = easterSnap.val() !== null ? easterSnap.val() : 25;
     updateLolPopStockDisplay();
   }
 
@@ -960,6 +1016,14 @@
     if (lolPopStock <= 0) return false;
     lolPopStock--;
     await db.ref('lolPopStock').set(lolPopStock);
+    updateLolPopStockDisplay();
+    return true;
+  }
+  
+  async function decreaseEasterStock() {
+    if (easterStock <= 0) return false;
+    easterStock--;
+    await db.ref('easterStock').set(easterStock);
     updateLolPopStockDisplay();
     return true;
   }
@@ -1006,9 +1070,11 @@
     if (theme === 'light') {
       document.body.classList.add('light');
       localStorage.setItem('theme', 'light');
+      document.getElementById('darkThemeToggle').classList.remove('active');
     } else {
       document.body.classList.remove('light');
       localStorage.setItem('theme', 'dark');
+      document.getElementById('darkThemeToggle').classList.add('active');
     }
   }
   
@@ -1025,7 +1091,11 @@
   }
   
   const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'light') document.body.classList.add('light');
+  if (savedTheme === 'light') {
+    document.body.classList.add('light');
+  } else {
+    document.body.classList.remove('light');
+  }
   const savedColorTheme = localStorage.getItem('colorTheme');
   if (savedColorTheme && savedColorTheme !== 'default') document.body.classList.add(`theme-${savedColorTheme}`);
 
@@ -1111,9 +1181,10 @@
     return !snap.exists() || snap.val() === excludeUid;
   }
 
-  function formatLastSeen(lastSeen, online, frozen, blocked) {
+  function formatLastSeen(lastSeen, online, frozen, blocked, hideOnline) {
     if(blocked) return '🚫 Заблокирован';
     if(frozen) return '❄️ Аккаунт заморожен';
+    if(hideOnline) return '● Не в сети';
     if(online) return '🟢 Онлайн';
     if(!lastSeen) return '● Был(а) недавно';
     const date = new Date(lastSeen);
@@ -1209,7 +1280,7 @@
     const nick = document.getElementById('nickInputReg').value.trim();
     if(!nick) { showError('Введите ваше имя'); return; }
     let avatarUrl = selectedAvatarUrl || selectedAvatar;
-    const profile = { login, nick, avatar: avatarUrl, uid: user.uid, deviceId, frozen: false, banned: false, isAdmin: false, premium: false, deleted: false, createdAt: Date.now(), blockedBy: [], description: '', balance: 0, gifts: [] };
+    const profile = { login, nick, avatar: avatarUrl, uid: user.uid, deviceId, frozen: false, banned: false, isAdmin: false, premium: false, deleted: false, createdAt: Date.now(), blockedBy: [], description: '', balance: 0, gifts: [], hideOnline: false };
     await db.ref('users/'+user.uid).set(profile);
     await db.ref('devices/'+deviceId).set({ uid: user.uid });
     document.getElementById('avatarScreen').classList.remove('active');
@@ -1222,7 +1293,7 @@
       let snap = await db.ref('users/'+user.uid).once('value');
       if(!snap.exists()) {
         if(user.email === 'hoopsmart_admin@system.com') {
-          const adminProfile = { login:'HooPSmart', nick:'HoopSmart Admin', avatar:'👑', uid:user.uid, deviceId, frozen:false, banned:false, isAdmin:true, premium:true, username:'hoopsmart', deleted:false, createdAt:Date.now(), blockedBy: [], description: 'Системный администратор', balance: 0, gifts: [] };
+          const adminProfile = { login:'HooPSmart', nick:'HoopSmart Admin', avatar:'👑', uid:user.uid, deviceId, frozen:false, banned:false, isAdmin:true, premium:true, username:'hoopsmart', deleted:false, createdAt:Date.now(), blockedBy: [], description: 'Системный администратор', balance: 0, gifts: [], hideOnline: false };
           await db.ref('users/'+user.uid).set(adminProfile);
           await db.ref('usernames/hoopsmart').set(user.uid);
           currentUser = adminProfile;
@@ -1241,10 +1312,37 @@
         return;
       }
       if(currentUser.blockedBy) blockedUsers = new Set(currentUser.blockedBy);
-      await loadLolPopStock();
+      await loadLimitedStocks();
       initMain();
       hideSplashAndShowScreen('mainScreen');
       setupOnline();
+      
+      // Настройка переключателя темной темы
+      const darkToggle = document.getElementById('darkThemeToggle');
+      if (darkToggle) {
+        darkToggle.classList.toggle('active', document.body.classList.contains('light') === false);
+        darkToggle.onclick = () => {
+          const isDark = !document.body.classList.contains('light');
+          setTheme(isDark ? 'light' : 'dark');
+        };
+      }
+      
+      // Настройка переключателя скрытия онлайна
+      const onlineToggle = document.getElementById('showOnlineToggle');
+      if (onlineToggle) {
+        onlineToggle.classList.toggle('active', currentUser.hideOnline === true);
+        onlineToggle.onclick = async () => {
+          if (!currentUser.premium && !currentUser.isAdmin) {
+            alert('⭐ Эта функция доступна только с подпиской HoopPremium!');
+            return;
+          }
+          const newValue = !currentUser.hideOnline;
+          await db.ref('users/'+currentUser.uid).update({ hideOnline: newValue });
+          currentUser.hideOnline = newValue;
+          onlineToggle.classList.toggle('active', newValue);
+          alert(newValue ? '✅ Теперь ваш онлайн скрыт' : '✅ Теперь ваш онлайн виден');
+        };
+      }
       
       const userRef = db.ref('users/'+currentUser.uid);
       let lastGiftCount = (currentUser.gifts || []).length;
@@ -1254,6 +1352,7 @@
           currentUser.frozen = updated.frozen;
           currentUser.premium = updated.premium;
           currentUser.balance = updated.balance;
+          currentUser.hideOnline = updated.hideOnline;
           const newGifts = updated.gifts || [];
           if (newGifts.length > lastGiftCount) {
             const newGift = newGifts[newGifts.length - 1];
@@ -1266,6 +1365,7 @@
           document.getElementById('frozenStatusBar').style.display = currentUser.frozen ? 'flex' : 'none';
           updateHeaderUI();
           if (document.getElementById('settingsBalance')) document.getElementById('settingsBalance').textContent = currentUser.balance || 0;
+          if (onlineToggle) onlineToggle.classList.toggle('active', currentUser.hideOnline === true);
         }
       });
     } else {
@@ -1278,9 +1378,21 @@
   function setupOnline() {
     if(!currentUser) return;
     const onlineRef = db.ref('online/'+currentUser.uid);
-    onlineRef.set({ online: true, lastSeen: Date.now(), nick: currentUser.nick });
+    if (currentUser.hideOnline && currentUser.premium) {
+      onlineRef.set({ online: false, lastSeen: Date.now(), nick: currentUser.nick, hidden: true });
+    } else {
+      onlineRef.set({ online: true, lastSeen: Date.now(), nick: currentUser.nick });
+    }
     onlineRef.onDisconnect().set({ online: false, lastSeen: Date.now() });
-    setInterval(() => { if(currentUser) onlineRef.update({ lastSeen: Date.now() }); }, 30000);
+    setInterval(() => {
+      if(currentUser) {
+        if (currentUser.hideOnline && currentUser.premium) {
+          onlineRef.update({ online: false, lastSeen: Date.now() });
+        } else {
+          onlineRef.update({ online: true, lastSeen: Date.now() });
+        }
+      }
+    }, 30000);
   }
 
   function getUserDisplay(user) {
@@ -1288,12 +1400,13 @@
     if(user.deleted) return { name: 'Удаленный аккаунт', avatar: '👻', frozen: false, premium: false, isAdmin: false, deleted: true, blocked: false, description: '' };
     if(user.frozen) return { name: '❄️ Замороженный аккаунт', avatar: user.avatar || '👤', frozen: true, premium: false, isAdmin: false, deleted: false, blocked: false, description: user.description || '' };
     const isBlocked = currentUser && user.uid !== currentUser.uid && blockedUsers.has(user.uid);
-    return { name: user.nick, avatar: user.avatar, frozen: false, premium: user.premium, isAdmin: user.isAdmin, deleted: false, username: user.username, blocked: isBlocked, description: user.description || '', balance: user.balance || 0, gifts: user.gifts || [] };
+    return { name: user.nick, avatar: user.avatar, frozen: false, premium: user.premium, isAdmin: user.isAdmin, deleted: false, username: user.username, blocked: isBlocked, description: user.description || '', balance: user.balance || 0, gifts: user.gifts || [], hideOnline: user.hideOnline };
   }
 
-  function canSeeOnline(blockedBy, targetUid) {
-    if (!blockedBy) return true;
-    return !blockedBy.includes(targetUid);
+  function canSeeOnline(targetUser) {
+    if (!targetUser) return true;
+    if (targetUser.hideOnline && targetUser.premium) return false;
+    return true;
   }
 
   async function blockUser(uid) {
@@ -1338,6 +1451,13 @@
       }
       giftNumber = 11 - lolPopStock;
       await decreaseLolPopStock();
+    } else if (giftEmoji === '🥚') {
+      if (easterStock <= 0) {
+        alert('❌ К сожалению, лимитированный подарок Пасхальное яйцо закончился!');
+        return false;
+      }
+      giftNumber = 26 - easterStock;
+      await decreaseEasterStock();
     }
     
     const newBalance = currentUser.balance - price;
@@ -1387,7 +1507,13 @@
     document.getElementById('giftViewName').textContent = gift.name;
     document.getElementById('giftViewPrice').textContent = `Цена: ${gift.price || gifts[gift.emoji]?.price || 0} HC`;
     if (gift.number) {
-      document.getElementById('giftViewNumber').innerHTML = `🎫 Номер: ${gift.number}/10`;
+      if (gift.emoji === '🍭') {
+        document.getElementById('giftViewNumber').innerHTML = `🎫 Номер: ${gift.number}/10`;
+      } else if (gift.emoji === '🥚') {
+        document.getElementById('giftViewNumber').innerHTML = `🥚 Номер: ${gift.number}/25`;
+      } else {
+        document.getElementById('giftViewNumber').style.display = 'none';
+      }
       document.getElementById('giftViewNumber').style.display = 'block';
     } else {
       document.getElementById('giftViewNumber').style.display = 'none';
@@ -1402,23 +1528,31 @@
     if (!container) return;
     container.innerHTML = '';
     if (currentUser.gifts && currentUser.gifts.length > 0) {
-      container.innerHTML = '<div class="settings-title">🎁 Мои подарки</div>';
       currentUser.gifts.forEach((gift, index) => {
         const giftDiv = document.createElement('div');
         giftDiv.className = 'gift-collection-item';
-        giftDiv.innerHTML = `${gift.emoji} ${gift.name} ${gift.number ? `#${gift.number}` : ''} <span style="font-size:10px; color:#64748b;">от ${gift.fromName || 'неизвестно'}</span> <button class="action-btn sell-gift" data-index="${index}" style="margin-left:8px;">💰 Продать</button> <button class="action-btn view-gift" data-index="${index}" style="margin-left:4px;">👁️</button>`;
+        let extraInfo = '';
+        if (gift.number) {
+          if (gift.emoji === '🍭') extraInfo = ` #${gift.number}`;
+          else if (gift.emoji === '🥚') extraInfo = ` #${gift.number}`;
+        }
+        giftDiv.innerHTML = `
+          <div class="gift-collection-emoji">${gift.emoji}</div>
+          <div class="gift-collection-name">${gift.name}${extraInfo}</div>
+          <div class="gift-collection-from">${gift.fromName || 'неизвестно'}</div>
+          <button class="action-btn sell-gift" data-index="${index}" style="margin-top:6px; font-size:10px;">💰 Продать</button>
+        `;
+        giftDiv.onclick = (e) => {
+          if (!e.target.classList.contains('sell-gift')) {
+            openGiftView(gift);
+          }
+        };
         container.appendChild(giftDiv);
       });
       document.querySelectorAll('.sell-gift').forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
           sellGift(parseInt(btn.dataset.index));
-        };
-      });
-      document.querySelectorAll('.view-gift').forEach(btn => {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          openGiftView(currentUser.gifts[parseInt(btn.dataset.index)]);
         };
       });
     }
@@ -1429,19 +1563,21 @@
     if (!container) return;
     container.innerHTML = '';
     if (user.gifts && user.gifts.length > 0) {
-      container.innerHTML = '<div class="settings-title">🎁 Полученные подарки</div>';
-      user.gifts.forEach((gift, index) => {
+      user.gifts.forEach(gift => {
         const giftDiv = document.createElement('div');
         giftDiv.className = 'gift-collection-item';
-        giftDiv.innerHTML = `${gift.emoji} ${gift.name} ${gift.number ? `#${gift.number}` : ''} <span style="font-size:10px; color:#64748b;">от ${gift.fromName || 'неизвестно'}</span> <button class="action-btn view-gift" data-gift='${JSON.stringify(gift)}' style="margin-left:4px;">👁️</button>`;
+        let extraInfo = '';
+        if (gift.number) {
+          if (gift.emoji === '🍭') extraInfo = ` #${gift.number}`;
+          else if (gift.emoji === '🥚') extraInfo = ` #${gift.number}`;
+        }
+        giftDiv.innerHTML = `
+          <div class="gift-collection-emoji">${gift.emoji}</div>
+          <div class="gift-collection-name">${gift.name}${extraInfo}</div>
+          <div class="gift-collection-from">от ${gift.fromName || 'неизвестно'}</div>
+        `;
+        giftDiv.onclick = () => openGiftView(gift);
         container.appendChild(giftDiv);
-      });
-      document.querySelectorAll('.view-gift').forEach(btn => {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          const gift = JSON.parse(btn.dataset.gift);
-          openGiftView(gift);
-        };
       });
     }
   }
@@ -1522,8 +1658,8 @@
     const userSnap = await db.ref('users/'+msg.uid).once('value');
     const display = getUserDisplay(userSnap.val());
     const onlineSnap = await db.ref('online/'+msg.uid).once('value');
-    const isOnline = onlineSnap.val()?.online;
-    const canSee = canSeeOnline(currentUser.blockedBy, msg.uid);
+    const onlineData = onlineSnap.val() || {};
+    const canSee = canSeeOnline(display);
     let nickHtml = display.name;
     if(display.isAdmin) nickHtml += ' <span class="admin-badge">АДМИН</span>';
     if(display.premium) nickHtml += ' <span class="premium-badge">⭐</span>';
@@ -1544,8 +1680,7 @@
     const readSnap = await db.ref(`read/${chatId}/${msg.uid}/${msg.id}`).once('value');
     const isRead = readSnap.val() === true;
     
-    // Сделаем ник кликабельным для открытия профиля
-    div.innerHTML = `<div class="msg-avatar" data-uid="${msg.uid}">${avatarHtml}${isOnline && !isOwn && canSee && !display.frozen ? '<span class="online-indicator"></span>' : ''}</div>
+    div.innerHTML = `<div class="msg-avatar" data-uid="${msg.uid}">${avatarHtml}${canSee && onlineData.online && !display.frozen ? '<span class="online-indicator"></span>' : ''}</div>
       <div><div class="bubble"><b><span class="nickname-clickable" data-uid="${msg.uid}" style="cursor:pointer;">${nickHtml}</span></b><br>${messageHtml}</div>
       <div class="message-footer"><span class="message-time">${time}</span>${isOwn ? `<span class="check-mark ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</span>` : ''}</div></div>`;
     
@@ -1625,10 +1760,9 @@
     document.getElementById('chatTitle').innerHTML = `${display.name} ${display.premium ? '⭐' : ''}`;
     document.getElementById('chatTitle').style.cursor = 'pointer';
     
-    // Обновляем статус онлайн/последнее посещение в подзаголовке
     const onlineSnap = await db.ref('online/'+otherUid).once('value');
     const onlineData = onlineSnap.val() || {};
-    const canSee = canSeeOnline(other.blockedBy, currentUser.uid);
+    const canSee = canSeeOnline(display);
     let statusText = '';
     if (other.frozen) {
       statusText = '❄️ Аккаунт заморожен';
@@ -1659,6 +1793,8 @@
     ref.off();
     container.innerHTML = '';
     let initialLoad = true;
+    
+    // Загружаем все сообщения один раз, сортируем и добавляем
     ref.orderByChild('timestamp').once('value', async (snapshot) => {
       const data = snapshot.val() || {};
       const messages = Object.entries(data).map(([key, value]) => ({ ...value, id: key }));
@@ -1669,12 +1805,15 @@
       setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
       initialLoad = false;
     });
+    
+    // Слушаем новые сообщения
     ref.orderByChild('timestamp').startAfter(Date.now()).on('child_added', async (snap) => {
       if (!initialLoad) {
         const msg = snap.val();
         if (msg) await appendMessage(container, { ...msg, id: snap.key }, chatId, true, msg.uid === currentUser.uid);
       }
     });
+    
     ref.on('child_removed', async (snap) => {
       const el = container.querySelector(`.message[data-message-id="${snap.key}"]`);
       if (el) el.remove();
@@ -1701,7 +1840,6 @@
     loadChats();
   };
 
-  // Удаляем карандаш
   const newChatBtn = document.getElementById('newChatBtn');
   if (newChatBtn) newChatBtn.remove();
   
@@ -1739,7 +1877,6 @@
     document.querySelector('.tab[data-tab="chats"]').click();
   };
   
-  // Клик на заголовок чата для открытия профиля собеседника
   document.getElementById('chatHeaderBtn').onclick = () => {
     if (currentChat && currentChat.type === 'dm' && currentChat.uid) {
       openUserProfile(currentChat.uid);
@@ -1789,7 +1926,7 @@
     const onlineSnap = await db.ref('online/'+uid).once('value');
     const onlineData = onlineSnap.val() || {};
     const isBlocked = blockedUsers.has(uid);
-    const canSee = canSeeOnline(currentUser.blockedBy, uid);
+    const canSee = canSeeOnline(display);
     const avatarHtml = (display.avatar && (display.avatar.startsWith('http') || display.avatar.startsWith('data'))) ? `<img src="${display.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : display.avatar || '👤';
     document.getElementById('userProfileAvatar').innerHTML = avatarHtml;
     
@@ -1848,6 +1985,10 @@
           const comment = document.getElementById('giftCommentInput').value.trim();
           if (giftEmoji === '🍭' && lolPopStock <= 0) {
             alert('❌ К сожалению, лимитированный подарок Lol Pop закончился!');
+            return;
+          }
+          if (giftEmoji === '🥚' && easterStock <= 0) {
+            alert('❌ К сожалению, лимитированный подарок Пасхальное яйцо закончился!');
             return;
           }
           await sendGift(currentProfileUid, giftEmoji, giftName, price, comment);
@@ -1971,7 +2112,6 @@
   document.getElementById('adminMenuBtn').onclick = () => { document.getElementById('adminPanel').classList.add('active'); loadAdminData(); };
   document.getElementById('closeAdminPanel').onclick = () => document.getElementById('adminPanel').classList.remove('active');
   document.getElementById('logoutBtn').onclick = async () => { await auth.signOut(); };
-  document.getElementById('themeToggleBtn').onclick = () => setTheme(document.body.classList.contains('light') ? 'dark' : 'light');
   document.querySelectorAll('.theme-option').forEach(btn => { btn.onclick = () => setColorTheme(btn.dataset.theme); });
 
   async function loadAdminData() {
