@@ -66,7 +66,7 @@
       bottom: 0;
       background: rgba(0,0,0,0.95);
       backdrop-filter: blur(12px);
-      z-index: 2000;
+      z-index: 9999;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -301,7 +301,9 @@
       align-items: center;
       gap: 12px;
       transition: all 0.3s ease;
+      cursor: pointer;
     }
+    .chat-header:hover { background: rgba(20, 20, 35, 0.95); }
     .back-btn {
       background: rgba(30, 41, 59, 0.8);
       border: none;
@@ -314,7 +316,7 @@
       transition: all 0.3s ease;
     }
     .back-btn:hover { background: rgba(30, 41, 59, 1); transform: scale(0.95); }
-    .chat-title { flex: 1; font-weight: 600; font-size: 18px; color: white; }
+    .chat-title { flex: 1; font-weight: 600; font-size: 18px; color: white; cursor: pointer; }
     .chat-subtitle { font-size: 11px; color: #64748b; margin-top: 2px; }
     .chat-menu-btn {
       background: rgba(30, 41, 59, 0.8);
@@ -725,7 +727,7 @@
     </div>
 
     <div id="chatView" style="display:none; flex:1; flex-direction:column; min-height:0;">
-      <div class="chat-header">
+      <div class="chat-header" id="chatHeaderBtn">
         <button class="back-btn" id="backToChats">←</button>
         <div class="chat-title" id="chatTitle">Чат</div>
         <div class="chat-subtitle" id="chatSubtitle"></div>
@@ -771,8 +773,8 @@
     </div>
   </div>
 
-  <!-- Модальное окно просмотра подарка -->
-  <div id="giftViewModal" class="modal-overlay">
+  <!-- Модальное окно просмотра подарка (поверх всего) -->
+  <div id="giftViewModal" class="modal-overlay" style="z-index: 10000;">
     <div class="modal-content" style="text-align:center;">
       <div style="font-size:80px; margin-bottom:16px;" id="giftViewEmoji">🎁</div>
       <div style="font-size:20px; font-weight:700; margin-bottom:8px;" id="giftViewName">Подарок</div>
@@ -1542,11 +1544,13 @@
     const readSnap = await db.ref(`read/${chatId}/${msg.uid}/${msg.id}`).once('value');
     const isRead = readSnap.val() === true;
     
+    // Сделаем ник кликабельным для открытия профиля
     div.innerHTML = `<div class="msg-avatar" data-uid="${msg.uid}">${avatarHtml}${isOnline && !isOwn && canSee && !display.frozen ? '<span class="online-indicator"></span>' : ''}</div>
-      <div><div class="bubble"><b>${nickHtml}</b><br>${messageHtml}</div>
+      <div><div class="bubble"><b><span class="nickname-clickable" data-uid="${msg.uid}" style="cursor:pointer;">${nickHtml}</span></b><br>${messageHtml}</div>
       <div class="message-footer"><span class="message-time">${time}</span>${isOwn ? `<span class="check-mark ${isRead ? 'read' : ''}">${isRead ? '✓✓' : '✓'}</span>` : ''}</div></div>`;
     
     div.querySelector('.msg-avatar').onclick = (e) => { e.stopPropagation(); openUserProfile(msg.uid); };
+    div.querySelector('.nickname-clickable').onclick = (e) => { e.stopPropagation(); openUserProfile(msg.uid); };
     div.querySelectorAll('.mention').forEach(mention => {
       mention.onclick = async (e) => {
         e.stopPropagation();
@@ -1619,7 +1623,28 @@
     currentChat = { type: 'dm', uid: otherUid };
     const display = getUserDisplay(other);
     document.getElementById('chatTitle').innerHTML = `${display.name} ${display.premium ? '⭐' : ''}`;
-    document.getElementById('chatSubtitle').innerHTML = `@${other?.username || ''}`;
+    document.getElementById('chatTitle').style.cursor = 'pointer';
+    
+    // Обновляем статус онлайн/последнее посещение в подзаголовке
+    const onlineSnap = await db.ref('online/'+otherUid).once('value');
+    const onlineData = onlineSnap.val() || {};
+    const canSee = canSeeOnline(other.blockedBy, currentUser.uid);
+    let statusText = '';
+    if (other.frozen) {
+      statusText = '❄️ Аккаунт заморожен';
+    } else if (canSee && onlineData.online) {
+      statusText = '🟢 Онлайн';
+    } else if (canSee && onlineData.lastSeen) {
+      const diff = Math.floor((Date.now() - onlineData.lastSeen) / 1000 / 60);
+      if (diff < 1) statusText = '● Был(а) только что';
+      else if (diff < 60) statusText = `● Был(а) ${diff} мин назад`;
+      else if (diff < 1440) statusText = `● Был(а) ${Math.floor(diff/60)} ч назад`;
+      else statusText = `● Был(а) ${new Date(onlineData.lastSeen).toLocaleDateString()}`;
+    } else {
+      statusText = '● Был(а) недавно';
+    }
+    document.getElementById('chatSubtitle').innerHTML = statusText;
+    
     document.getElementById('chatsView').style.display = 'none';
     document.getElementById('usersView').style.display = 'none';
     document.getElementById('chatView').style.display = 'flex';
@@ -1676,6 +1701,7 @@
     loadChats();
   };
 
+  // Удаляем карандаш
   const newChatBtn = document.getElementById('newChatBtn');
   if (newChatBtn) newChatBtn.remove();
   
@@ -1711,6 +1737,13 @@
   document.getElementById('backToChats').onclick = () => {
     document.getElementById('chatView').style.display = 'none';
     document.querySelector('.tab[data-tab="chats"]').click();
+  };
+  
+  // Клик на заголовок чата для открытия профиля собеседника
+  document.getElementById('chatHeaderBtn').onclick = () => {
+    if (currentChat && currentChat.type === 'dm' && currentChat.uid) {
+      openUserProfile(currentChat.uid);
+    }
   };
 
   async function loadUsersForModal() {
